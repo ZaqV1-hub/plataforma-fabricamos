@@ -74,6 +74,17 @@ def append_unique(target: list[str], value: str) -> None:
         target.append(value)
 
 
+def normalize_key(value: str) -> str:
+    return re.sub(r"\s+", " ", value.strip().lower())
+
+
+def is_associated_status(value: str) -> bool:
+    normalized = normalize_key(value)
+    if not normalized:
+        return False
+    return normalized.startswith("associado")
+
+
 def preferred_substance_name(inn: str, insumo: str) -> str:
     if inn and not is_placeholder(inn):
         return inn
@@ -119,8 +130,14 @@ def main() -> None:
         if not company or company in LEGEND_COMPANIES:
             continue
 
+        associate = clean_scalar(row["associado"])
+        if not is_associated_status(associate):
+            continue
+
+        company_key = normalize_key(company)
+
         item = companies.setdefault(
-            company,
+            company_key,
             {
                 "company": company,
                 "associate": "",
@@ -128,6 +145,7 @@ def main() -> None:
                 "origins": [],
                 "substances": [],
                 "catalog_items": [],
+                "_catalog_seen": set(),
                 "responsible_name": "",
                 "responsible_phone": "",
                 "responsible_email": "",
@@ -137,7 +155,6 @@ def main() -> None:
             },
         )
 
-        associate = clean_scalar(row["associado"])
         process = clean_scalar(row["processo"])
         origin = clean_scalar(row["origem"])
         insumo = clean_scalar(row["insumo"])
@@ -176,15 +193,26 @@ def main() -> None:
             "display_name": display_name,
         }
 
-        if any(catalog_item.values()):
+        catalog_key = tuple(
+            normalize_key(str(catalog_item[field]))
+            for field in ("display_name", "insumo", "dcb", "inn", "cas", "ncm", "cbpf", "validade")
+        )
+
+        if any(catalog_item.values()) and catalog_key not in item["_catalog_seen"]:
+            item["_catalog_seen"].add(catalog_key)
             item["catalog_items"].append(catalog_item)
+
+    payload: list[dict[str, object]] = []
+    for item in companies.values():
+        item.pop("_catalog_seen", None)
+        payload.append(item)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
-        json.dump(list(companies.values()), handle, ensure_ascii=False, indent=2)
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
 
-    print(f"Exported {len(companies)} fabricantes to {output_path}")
+    print(f"Exported {len(payload)} fabricantes to {output_path}")
 
 
 if __name__ == "__main__":

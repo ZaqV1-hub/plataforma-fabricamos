@@ -3219,6 +3219,15 @@ class Fabricamos_Native {
 		return trim( (string) $value );
 	}
 
+	protected function is_associated_manufacturer( $post_id ) {
+		$status = $this->normalize_lookup_value( $this->get_manufacturer_meta_text( $post_id, 'fab_associate_status' ) );
+		if ( '' === $status ) {
+			return true;
+		}
+
+		return false === strpos( $status, 'nao associado' );
+	}
+
 	public function get_panel_form_context( $manufacturer_id = 0 ) {
 		$manufacturer = $manufacturer_id ? get_post( $manufacturer_id ) : null;
 		$detail       = $manufacturer instanceof WP_Post ? $this->get_manufacturer_detail( $manufacturer ) : null;
@@ -3276,17 +3285,29 @@ class Fabricamos_Native {
 			)
 		);
 
-		$total_items = count( $query->posts );
+		$unique_posts = array();
+		$seen_titles  = array();
+		foreach ( $query->posts as $post ) {
+			$key = $this->normalize_lookup_value( get_the_title( $post ) );
+			if ( isset( $seen_titles[ $key ] ) ) {
+				continue;
+			}
+
+			$seen_titles[ $key ] = true;
+			$unique_posts[]      = $post;
+		}
+
+		$total_items = count( $unique_posts );
 		$total_pages = max( 1, (int) ceil( $total_items / $per_page ) );
 		$current_page = min( $current_page, $total_pages );
 		$offset = ( $current_page - 1 ) * $per_page;
-		$current_cards = array_slice( $query->posts, $offset, $per_page );
+		$current_cards = array_slice( $unique_posts, $offset, $per_page );
 
 		return array(
 			'mode'              => $mode,
 			'filters'           => $filters,
 			'has_filters'       => $this->has_active_filters( $filters ),
-			'manufacturers'     => $query->posts,
+			'manufacturers'     => $unique_posts,
 			'primary_cards'     => $current_cards,
 			'processes'         => $this->get_available_processes(),
 			'detail_text'       => $this->get_filter_detail_text( $filters ),
@@ -3339,7 +3360,14 @@ class Fabricamos_Native {
 			);
 		}
 
-		$ids = get_posts( $args );
+		$ids = array_values(
+			array_filter(
+				get_posts( $args ),
+				function ( $post_id ) {
+					return $this->is_associated_manufacturer( $post_id );
+				}
+			)
+		);
 
 		if ( empty( $filters['substance'] ) ) {
 			return $ids;
@@ -3756,24 +3784,33 @@ SVG;
 
 	public function search_manufacturers( $search, $limit = 6 ) {
 		if ( $search ) {
-			return $this->search_posts_by_title_prefix( 'fabricante', array( 'publish' ), $search, $limit );
+			$posts = $this->search_posts_by_title_prefix( 'fabricante', array( 'publish' ), $search, -1 );
+		} else {
+			$args = array(
+				'post_type'           => 'fabricante',
+				'post_status'         => 'publish',
+				'posts_per_page'      => -1,
+				'orderby'             => 'title',
+				'order'               => 'ASC',
+				'suppress_filters'    => false,
+				'ignore_sticky_posts' => true,
+			);
+
+			$posts = get_posts( $args );
 		}
 
-		$args = array(
-			'post_type'           => 'fabricante',
-			'post_status'         => 'publish',
-			'posts_per_page'      => $limit,
-			'orderby'             => 'title',
-			'order'               => 'ASC',
-			'suppress_filters'    => false,
-			'ignore_sticky_posts' => true,
-		);
-
-		if ( $search ) {
-			$args['s'] = $search;
+		$filtered = array();
+		foreach ( $posts as $post ) {
+			if ( $this->is_associated_manufacturer( $post->ID ) ) {
+				$filtered[] = $post;
+			}
 		}
 
-		return get_posts( $args );
+		if ( $limit > 0 ) {
+			return array_slice( $filtered, 0, $limit );
+		}
+
+		return $filtered;
 	}
 
 	protected function search_posts_by_title_prefix( $post_type, $statuses, $search, $limit ) {
