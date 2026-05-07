@@ -128,35 +128,53 @@ include __DIR__ . '/partials/page-start.php';
 
 				<div class="fab-panel">
 					<div class="fab-form-stack">
-						<label class="fab-label-strong" for="fab-contact-name">Responsável pela edição</label>
-						<input id="fab-contact-name" class="fab-input" name="fab_contact_name" value="<?php echo esc_attr( $context['contact_name'] ); ?>" required />
+						<label class="fab-label-strong" for="fab-editor-name">Responsável pela edição</label>
+						<input id="fab-editor-name" class="fab-input" name="fab_editor_name" value="<?php echo esc_attr( $context['editor_name'] ); ?>" required />
 					</div>
 
 					<div class="fab-two-cols">
 						<div class="fab-form-stack">
-							<label class="fab-label-strong" for="fab-phone">Telefone do responsável</label>
-							<input id="fab-phone" class="fab-input" name="fab_phone" type="tel" inputmode="tel" placeholder="(11) 4000-1000" value="<?php echo esc_attr( $context['phone'] ); ?>" minlength="10" required />
+							<label class="fab-label-strong" for="fab-editor-phone">Telefone do responsável</label>
+							<input id="fab-editor-phone" class="fab-input" name="fab_editor_phone" type="tel" inputmode="tel" placeholder="(11) 4000-1000" value="<?php echo esc_attr( $context['editor_phone'] ); ?>" minlength="10" required />
 						</div>
 						<div class="fab-form-stack">
-							<label class="fab-label-strong" for="fab-email">E-mail do responsável</label>
-							<input id="fab-email" class="fab-input" name="fab_email" type="email" value="<?php echo esc_attr( $context['email'] ); ?>" required />
+							<label class="fab-label-strong" for="fab-editor-email">E-mail do responsável</label>
+							<input id="fab-editor-email" class="fab-input" name="fab_editor_email" type="email" value="<?php echo esc_attr( $context['editor_email'] ); ?>" required />
+						</div>
+					</div>
+				</div>
+
+				<div class="fab-panel">
+					<div class="fab-form-stack">
+						<label class="fab-label-strong" for="fab-contact-name">Nome/Departamento público</label>
+						<input id="fab-contact-name" class="fab-input" name="fab_contact_name" value="<?php echo esc_attr( $context['contact_name'] ); ?>" />
+					</div>
+
+					<div class="fab-two-cols">
+						<div class="fab-form-stack">
+							<label class="fab-label-strong" for="fab-phone">Telefone público</label>
+							<input id="fab-phone" class="fab-input" name="fab_phone" type="tel" inputmode="tel" placeholder="(11) 4000-1000" value="<?php echo esc_attr( $context['phone'] ); ?>" />
+						</div>
+						<div class="fab-form-stack">
+							<label class="fab-label-strong" for="fab-email">E-mail público</label>
+							<input id="fab-email" class="fab-input" name="fab_email" type="email" value="<?php echo esc_attr( $context['email'] ); ?>" />
 						</div>
 					</div>
 
 					<div class="fab-form-stack">
 						<label class="fab-label-strong" for="fab-site">Site</label>
-						<input id="fab-site" class="fab-input" name="fab_site" type="url" value="<?php echo esc_attr( $context['site'] ); ?>" required />
+						<input id="fab-site" class="fab-input" name="fab_site" type="url" value="<?php echo esc_attr( $context['site'] ); ?>" />
 					</div>
 				</div>
 
 				<div class="fab-panel">
 					<div class="fab-two-cols">
 						<div class="fab-form-stack">
-							<label class="fab-label-strong" for="panel-login-email">Login do fabricante</label>
+							<label class="fab-label-strong" for="panel-login-email">Login de edição</label>
 							<input id="panel-login-email" class="fab-input" name="panel_login_email" type="email" value="<?php echo esc_attr( $context['login_email'] ); ?>" required />
 						</div>
 						<div class="fab-form-stack">
-							<label class="fab-label-strong" for="panel-login-password">Senha</label>
+							<label class="fab-label-strong" for="panel-login-password">Senha de edição</label>
 							<input id="panel-login-password" class="fab-input" name="panel_login_password" type="text" value="" placeholder="<?php echo esc_attr( $context['is_edit'] ? 'Deixe em branco para manter' : 'Defina uma senha' ); ?>" <?php echo $context['is_edit'] ? '' : 'required'; ?> />
 						</div>
 					</div>

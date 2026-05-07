@@ -2365,12 +2365,9 @@ class Fabricamos_Native {
 		}
 
 		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_description', 'fab_description', $description );
-		update_post_meta( $manufacturer->ID, 'fab_responsavel_nome', $name );
-		update_post_meta( $manufacturer->ID, 'fab_responsavel_telefone', $phone );
-		update_post_meta( $manufacturer->ID, 'fab_responsavel_email', $email );
-		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_contact_name', 'fab_contact_name', '' );
-		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_phone', 'fab_phone', '' );
-		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_email', 'fab_email', '' );
+		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_contact_name', 'fab_contact_name', $name );
+		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_phone', 'fab_phone', $phone );
+		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_email', 'fab_email', $email );
 		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_site', 'fab_site', $site );
 		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_substances', 'fab_substances', $substance_submission['matched_ids'] );
 		update_post_meta( $manufacturer->ID, 'fab_compiled_substances', $substance_submission['compiled'] );
@@ -2412,6 +2409,9 @@ class Fabricamos_Native {
 		$process         = isset( $_POST['fab_processo'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_processo'] ) ) : null;
 		$origin          = isset( $_POST['fab_origem'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_origem'] ) ) : null;
 		$description     = isset( $_POST['fab_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['fab_description'] ) ) : '';
+		$editor_name     = isset( $_POST['fab_editor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_editor_name'] ) ) : '';
+		$editor_phone    = isset( $_POST['fab_editor_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_editor_phone'] ) ) : '';
+		$editor_email    = isset( $_POST['fab_editor_email'] ) ? sanitize_email( wp_unslash( $_POST['fab_editor_email'] ) ) : '';
 		$name            = isset( $_POST['fab_contact_name'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_contact_name'] ) ) : '';
 		$phone           = isset( $_POST['fab_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_phone'] ) ) : '';
 		$email           = isset( $_POST['fab_email'] ) ? sanitize_email( wp_unslash( $_POST['fab_email'] ) ) : '';
@@ -2423,10 +2423,9 @@ class Fabricamos_Native {
 		if (
 			'' === $title ||
 			'' === $description ||
-			'' === $name ||
-			'' === $phone ||
-			'' === $email ||
-			'' === $site ||
+			'' === $editor_name ||
+			'' === $editor_phone ||
+			'' === $editor_email ||
 			'' === $login_email ||
 			( ! $manufacturer_id && '' === $login_password )
 		) {
@@ -2439,12 +2438,12 @@ class Fabricamos_Native {
 			exit;
 		}
 
-		if ( '' !== $phone && ! $this->is_valid_phone( $phone ) ) {
+		if ( '' !== $editor_phone && ! $this->is_valid_phone( $editor_phone ) ) {
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'invalid_phone', $this->panel_form_url( $manufacturer_id ) ) );
 			exit;
 		}
 
-		if ( ! is_email( $email ) || ! is_email( $login_email ) ) {
+		if ( ! is_email( $editor_email ) || ! is_email( $login_email ) || ( '' !== $email && ! is_email( $email ) ) ) {
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'invalid_email', $this->panel_form_url( $manufacturer_id ) ) );
 			exit;
 		}
@@ -2477,12 +2476,12 @@ class Fabricamos_Native {
 		}
 
 		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_description', 'fab_description', $description );
-		update_post_meta( $manufacturer_id, 'fab_responsavel_nome', $name );
-		update_post_meta( $manufacturer_id, 'fab_responsavel_telefone', $phone );
-		update_post_meta( $manufacturer_id, 'fab_responsavel_email', $email );
-		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_contact_name', 'fab_contact_name', '' );
-		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_phone', 'fab_phone', '' );
-		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_email', 'fab_email', '' );
+		update_post_meta( $manufacturer_id, 'fab_responsavel_nome', $editor_name );
+		update_post_meta( $manufacturer_id, 'fab_responsavel_telefone', $editor_phone );
+		update_post_meta( $manufacturer_id, 'fab_responsavel_email', $editor_email );
+		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_contact_name', 'fab_contact_name', $name );
+		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_phone', 'fab_phone', $phone );
+		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_email', 'fab_email', $email );
 		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_site', 'fab_site', $site );
 		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_substances', 'fab_substances', $substance_submission['matched_ids'] );
 		update_post_meta( $manufacturer_id, 'fab_compiled_substances', $substance_submission['compiled'] );
@@ -3274,15 +3273,18 @@ class Fabricamos_Native {
 			'process'        => $manufacturer instanceof WP_Post ? $this->get_manufacturer_meta_text( $manufacturer->ID, 'fab_processo' ) : '',
 			'origin'         => $manufacturer instanceof WP_Post ? $this->get_manufacturer_meta_text( $manufacturer->ID, 'fab_origem' ) : '',
 			'description'    => $detail ? $detail['description'] : '',
-			'contact_name'   => $editor['name'],
-			'phone'          => $editor['phone'],
-			'email'          => $editor['email'],
+			'contact_name'   => $detail ? $detail['contact_name'] : '',
+			'phone'          => $detail ? $detail['phone'] : '',
+			'email'          => $detail ? $detail['email'] : '',
+			'editor_name'    => $editor['name'],
+			'editor_phone'   => $editor['phone'],
+			'editor_email'   => $editor['email'],
 			'site'           => $detail ? $detail['site'] : '',
 			'image'          => $detail ? ( $detail['has_hero_image'] ? $detail['hero_image'] : $placeholder ) : $placeholder,
 			'has_image'      => $detail ? $detail['has_hero_image'] : false,
 			'placeholder'    => $placeholder,
 			'substances'     => $detail ? $detail['substances'] : array(),
-			'login_email'    => $manufacturer instanceof WP_Post ? $this->get_manufacturer_login_email( $manufacturer->ID ) : '',
+			'login_email'    => $manufacturer instanceof WP_Post ? ( $this->get_manufacturer_login_email( $manufacturer->ID ) ? $this->get_manufacturer_login_email( $manufacturer->ID ) : $editor['email'] ) : '',
 			'login_password' => '',
 			'is_edit'        => $manufacturer instanceof WP_Post,
 			'processes'      => $this->get_available_processes(),

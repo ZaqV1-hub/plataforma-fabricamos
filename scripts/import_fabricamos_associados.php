@@ -92,19 +92,6 @@ foreach ($companies as $item) {
         $usersUpdated++;
     }
 
-    if ($editorAccount['generated_password'] !== '') {
-        $passwordsGenerated++;
-        write_credentials_row($credentialsWriter, array(
-            'company' => $company,
-            'responsible_name' => $responsibleName,
-            'email' => $responsibleEmail,
-            'username' => $editorAccount['username'],
-            'password' => $editorAccount['generated_password'],
-            'status' => $editorAccount['status'],
-            'user_id' => (string) $editorAccount['user_id'],
-        ));
-    }
-
     $manufacturerId = find_manufacturer_by_title($company);
     $isNew = false;
 
@@ -149,6 +136,7 @@ foreach ($companies as $item) {
     sync_post_meta_text($manufacturerId, 'fab_contact_name', '');
     sync_post_meta_text($manufacturerId, 'fab_phone', '');
     sync_post_meta_text($manufacturerId, 'fab_email', '');
+    sync_post_meta_text($manufacturerId, 'fab_site', '');
     sync_post_meta_text($manufacturerId, 'fab_source_workbook', $sourceWorkbook);
     sync_post_meta_text($manufacturerId, 'fab_source_sheet', $sourceSheet);
     sync_post_meta_text($manufacturerId, 'fab_source_updated_label', $sourceUpdatedLabel);
@@ -161,6 +149,27 @@ foreach ($companies as $item) {
         delete_post_meta($manufacturerId, 'fab_editor_user_id');
         delete_post_meta($manufacturerId, 'fab_editor_username');
         delete_post_meta($manufacturerId, 'fab_editor_email');
+    }
+
+    $manufacturerLogin = ensure_manufacturer_login_credentials(
+        $manufacturerId,
+        $responsibleEmail,
+        $editorAccount['generated_password'],
+        $editorAccount['user_id'],
+        $options['reset_existing_passwords']
+    );
+
+    if ($manufacturerLogin['generated_password'] !== '') {
+        $passwordsGenerated++;
+        write_credentials_row($credentialsWriter, array(
+            'company' => $company,
+            'responsible_name' => $responsibleName,
+            'email' => $manufacturerLogin['email'],
+            'username' => $editorAccount['username'],
+            'password' => $manufacturerLogin['generated_password'],
+            'status' => $manufacturerLogin['status'],
+            'user_id' => (string) $editorAccount['user_id'],
+        ));
     }
 
     $matchedIds = array();
@@ -327,6 +336,49 @@ function deactivate_duplicate_manufacturers($primaryId, $title)
             ));
         }
     }
+}
+
+function ensure_manufacturer_login_credentials($manufacturerId, $loginEmail, $preferredPassword, $userId, $resetExistingPasswords)
+{
+    $manufacturerId = (int) $manufacturerId;
+    $email = sanitize_email((string) $loginEmail);
+    $preferredPassword = (string) $preferredPassword;
+    $userId = (int) $userId;
+
+    if ($manufacturerId <= 0 || $email === '' || ! is_email($email)) {
+        return array(
+            'email' => '',
+            'generated_password' => '',
+            'status' => 'none',
+        );
+    }
+
+    $currentEmail = sanitize_email((string) get_post_meta($manufacturerId, 'fab_login_email', true));
+    $currentHash = (string) get_post_meta($manufacturerId, 'fab_login_password_hash', true);
+    $password = $preferredPassword;
+    $status = 'existing';
+
+    if ($password === '' && ($resetExistingPasswords || $currentHash === '' || $currentEmail === '' || strcasecmp($currentEmail, $email) !== 0)) {
+        $password = wp_generate_password(18, true, true);
+        $status = 'generated';
+    } elseif ($password !== '') {
+        $status = $resetExistingPasswords ? 'password_reset' : 'created';
+    }
+
+    update_post_meta($manufacturerId, 'fab_login_email', $email);
+
+    if ($password !== '') {
+        update_post_meta($manufacturerId, 'fab_login_password_hash', wp_hash_password($password));
+        if ($userId > 0) {
+            wp_set_password($password, $userId);
+        }
+    }
+
+    return array(
+        'email' => $email,
+        'generated_password' => $password,
+        'status' => $status,
+    );
 }
 
 function ensure_editor_account(
