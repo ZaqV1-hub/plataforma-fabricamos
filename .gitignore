@@ -8,3 +8,4 @@ vendor/
 *.gz
 .DS_Store
 .env
+tmp/fabricamos-credentials-*.csv
