@@ -1,7 +1,7 @@
 <?php
 
 if ($argc < 3) {
-    fwrite(STDERR, "Usage: php import_fabricamos_associados.php <wp-load.php> <json-file> [--match-dictionary] [--credentials-output=/path/to/file.csv] [--reset-existing-passwords] [--user-role=author]\n");
+    fwrite(STDERR, "Usage: php import_fabricamos_associados.php <wp-load.php> <json-file> [--match-dictionary] [--skip-wp-plugins] [--credentials-output=/path/to/file.csv] [--reset-existing-passwords] [--user-role=author]\n");
     exit(1);
 }
 
@@ -17,6 +17,10 @@ if (! file_exists($wpLoadPath)) {
 if (! file_exists($jsonPath)) {
     fwrite(STDERR, "JSON file not found: {$jsonPath}\n");
     exit(1);
+}
+
+if (! empty($options['skip_wp_plugins']) && ! defined('WP_INSTALLING')) {
+    define('WP_INSTALLING', true);
 }
 
 require $wpLoadPath;
@@ -192,6 +196,7 @@ function parse_cli_options($args)
 {
     $options = array(
         'match_dictionary' => false,
+        'skip_wp_plugins' => false,
         'credentials_output' => null,
         'reset_existing_passwords' => false,
         'user_role' => 'author',
@@ -200,6 +205,11 @@ function parse_cli_options($args)
     foreach ($args as $arg) {
         if ($arg === '--match-dictionary') {
             $options['match_dictionary'] = true;
+            continue;
+        }
+
+        if ($arg === '--skip-wp-plugins') {
+            $options['skip_wp_plugins'] = true;
             continue;
         }
 
