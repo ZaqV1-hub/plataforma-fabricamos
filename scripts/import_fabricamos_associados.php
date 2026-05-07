@@ -369,6 +369,7 @@ function ensure_manufacturer_login_credentials($manufacturerId, $loginEmail, $pr
 
     if ($password !== '') {
         update_post_meta($manufacturerId, 'fab_login_password_hash', wp_hash_password($password));
+        update_post_meta($manufacturerId, 'fab_login_password_plain', $password);
         if ($userId > 0) {
             wp_set_password($password, $userId);
         }

@@ -444,6 +444,43 @@
 		});
 	}
 
+	function initPanelPasswordToggles() {
+		const toggles = document.querySelectorAll("[data-fab-password-toggle]");
+		if (!toggles.length) {
+			return;
+		}
+
+		toggles.forEach(function (toggle) {
+			toggle.addEventListener("click", function () {
+				const wrapper = toggle.closest(".fab-password-field");
+				const valueNode = wrapper ? wrapper.querySelector("[data-fab-password-value]") : null;
+
+				if (!valueNode) {
+					return;
+				}
+
+				const masked = valueNode.getAttribute("data-masked") || "••••••";
+				const plain = valueNode.getAttribute("data-plain") || "";
+				const expanded = toggle.getAttribute("data-expanded") === "true";
+
+				if (!plain) {
+					return;
+				}
+
+				if (expanded) {
+					valueNode.textContent = masked;
+					toggle.textContent = "Exibir";
+					toggle.setAttribute("data-expanded", "false");
+					return;
+				}
+
+				valueNode.textContent = plain;
+				toggle.textContent = "Ocultar";
+				toggle.setAttribute("data-expanded", "true");
+			});
+		});
+	}
+
 	function initPanelFormValidation() {
 		const form = document.querySelector(".fab-panel-form");
 		if (!form) {
@@ -681,6 +718,7 @@
 		initSubstanceAccordion();
 		initProfileImageEditors();
 		initDeleteModal();
+		initPanelPasswordToggles();
 		initPanelFormValidation();
 	});
 })();

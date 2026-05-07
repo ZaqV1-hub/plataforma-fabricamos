@@ -1238,6 +1238,10 @@ class Fabricamos_Native {
 		return '' !== (string) get_post_meta( $manufacturer_id, 'fab_login_password_hash', true );
 	}
 
+	protected function get_manufacturer_login_plain_password( $manufacturer_id ) {
+		return trim( (string) get_post_meta( $manufacturer_id, 'fab_login_password_plain', true ) );
+	}
+
 	protected function save_manufacturer_login_credentials( $manufacturer_id, $email, $password ) {
 		$email = sanitize_email( (string) $email );
 		$manufacturer_id = absint( $manufacturer_id );
@@ -1250,6 +1254,7 @@ class Fabricamos_Native {
 
 		if ( '' !== (string) $password ) {
 			update_post_meta( $manufacturer_id, 'fab_login_password_hash', wp_hash_password( (string) $password ) );
+			update_post_meta( $manufacturer_id, 'fab_login_password_plain', (string) $password );
 		}
 
 		return true;
@@ -2948,6 +2953,7 @@ class Fabricamos_Native {
 			$display_rows = $this->get_manufacturer_panel_substances( $manufacturer->ID );
 			$login_email  = $this->get_manufacturer_login_email( $manufacturer->ID );
 			$has_password = $this->manufacturer_has_login_password( $manufacturer->ID );
+			$password_raw = $this->get_manufacturer_login_plain_password( $manufacturer->ID );
 
 			foreach ( $display_rows as $substance ) {
 				$rows[] = array(
@@ -2966,6 +2972,7 @@ class Fabricamos_Native {
 					'phone'         => $editor['phone'] ? $editor['phone'] : '-',
 					'email'         => $login_email ? $login_email : '-',
 					'password'      => $has_password ? '••••••' : '-',
+					'password_raw'  => $password_raw,
 					'edit_url'      => $this->panel_form_url( $manufacturer->ID ),
 					'delete_target' => get_the_title( $manufacturer ),
 				);

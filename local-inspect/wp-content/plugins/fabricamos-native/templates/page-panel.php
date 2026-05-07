@@ -265,8 +265,8 @@ include __DIR__ . '/partials/page-start.php';
 								<th>Certificado (CBPF)</th>
 								<th>Nome</th>
 								<th>Telefone</th>
-								<th>Email</th>
-								<th>Senha</th>
+								<th class="fab-panel-table__email-col">Email</th>
+								<th class="fab-panel-table__password-col">Senha</th>
 								<th>Ações</th>
 							</tr>
 						</thead>
@@ -285,8 +285,24 @@ include __DIR__ . '/partials/page-start.php';
 									<td><?php echo esc_html( $row['certificate'] ); ?></td>
 									<td><?php echo esc_html( $row['contact_name'] ); ?></td>
 									<td><?php echo esc_html( $row['phone'] ); ?></td>
-									<td><?php echo esc_html( $row['email'] ); ?></td>
-									<td><?php echo esc_html( $row['password'] ); ?></td>
+									<td class="fab-panel-table__email-col"><?php echo esc_html( $row['email'] ); ?></td>
+									<td class="fab-panel-table__password-col">
+										<?php if ( '-' === $row['password'] ) : ?>
+											<span class="fab-password-field__value">-</span>
+										<?php else : ?>
+											<div class="fab-password-field">
+												<span
+													class="fab-password-field__value"
+													data-fab-password-value
+													data-masked="<?php echo esc_attr( $row['password'] ); ?>"
+													data-plain="<?php echo esc_attr( $row['password_raw'] ); ?>"
+												><?php echo esc_html( $row['password'] ); ?></span>
+												<?php if ( '' !== $row['password_raw'] ) : ?>
+													<button class="fab-password-field__toggle" type="button" data-fab-password-toggle>Exibir</button>
+												<?php endif; ?>
+											</div>
+										<?php endif; ?>
+									</td>
 									<td>
 										<div class="fab-table-actions">
 											<a class="fab-table-action fab-table-action--edit" href="<?php echo esc_url( $row['edit_url'] ); ?>" aria-label="Editar fabricante">✎</a>

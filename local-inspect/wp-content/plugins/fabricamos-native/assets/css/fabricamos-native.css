@@ -1416,10 +1416,10 @@ select.is-invalid {
 
 .fab-panel-table {
 	width: 100%;
-	min-width: 1760px;
+	min-width: 1940px;
 	border-collapse: separate;
 	border-spacing: 0;
-	table-layout: fixed;
+	table-layout: auto;
 }
 
 .fab-panel-table thead th {
@@ -1455,6 +1455,13 @@ select.is-invalid {
 	white-space: nowrap;
 	word-break: normal;
 	overflow-wrap: normal;
+}
+
+.fab-panel-table__email-col,
+.fab-panel-table__email-col a {
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: anywhere;
 }
 
 .fab-panel-table th:nth-child(1),
@@ -1519,17 +1526,17 @@ select.is-invalid {
 
 .fab-panel-table th:nth-child(13),
 .fab-panel-table td:nth-child(13) {
-	width: 180px;
+	width: 260px;
 }
 
 .fab-panel-table th:nth-child(14),
 .fab-panel-table td:nth-child(14) {
-	width: 90px;
+	width: 180px;
 }
 
 .fab-panel-table th:nth-child(15),
 .fab-panel-table td:nth-child(15) {
-	width: 110px;
+	width: 120px;
 }
 
 .fab-panel-table__empty {
@@ -1549,6 +1556,33 @@ select.is-invalid {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+}
+
+.fab-password-field {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 150px;
+}
+
+.fab-password-field__value {
+	font-family: Consolas, Monaco, monospace;
+	letter-spacing: 0.04em;
+}
+
+.fab-password-field__toggle {
+	border: 0;
+	background: transparent;
+	color: var(--fab-header);
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+	padding: 0;
+}
+
+.fab-password-field__toggle:hover,
+.fab-password-field__toggle:focus {
+	text-decoration: underline;
 }
 
 .fab-table-action {
