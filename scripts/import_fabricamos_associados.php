@@ -144,6 +144,9 @@ foreach ($companies as $item) {
     sync_post_meta_text($manufacturerId, 'fab_responsavel_nome', $responsibleName);
     sync_post_meta_text($manufacturerId, 'fab_responsavel_telefone', $responsiblePhone);
     sync_post_meta_text($manufacturerId, 'fab_responsavel_email', $responsibleEmail);
+    sync_post_meta_text($manufacturerId, 'fab_contact_name', $responsibleName);
+    sync_post_meta_text($manufacturerId, 'fab_phone', $responsiblePhone);
+    sync_post_meta_text($manufacturerId, 'fab_email', $responsibleEmail);
     sync_post_meta_text($manufacturerId, 'fab_source_workbook', $sourceWorkbook);
     sync_post_meta_text($manufacturerId, 'fab_source_sheet', $sourceSheet);
     sync_post_meta_text($manufacturerId, 'fab_source_updated_label', $sourceUpdatedLabel);
@@ -390,25 +393,36 @@ function match_substance_post_id($name, $index, $fabricamos)
         return (int) $index[$normalized];
     }
 
-    $results = $fabricamos->search_substances($name, 10);
+    if (method_exists($fabricamos, 'search_dictionary_substances')) {
+        $results = $fabricamos->search_dictionary_substances($name, 10);
+    } else {
+        $results = $fabricamos->search_substances($name, 10);
+    }
+
     if (empty($results)) {
         return 0;
     }
 
     foreach ($results as $post) {
-        if (normalize_lookup_value($post->post_title) === $normalized) {
-            return (int) $post->ID;
+        $postTitle = is_array($post) ? (isset($post['title']) ? $post['title'] : '') : $post->post_title;
+        $postId = is_array($post) ? (isset($post['id']) ? (int) $post['id'] : 0) : (int) $post->ID;
+
+        if (normalize_lookup_value($postTitle) === $normalized) {
+            return $postId;
         }
     }
 
     if (count($results) === 1) {
-        return (int) $results[0]->ID;
+        $first = $results[0];
+        return is_array($first) ? (isset($first['id']) ? (int) $first['id'] : 0) : (int) $first->ID;
     }
 
     foreach ($results as $post) {
-        $candidate = normalize_lookup_value($post->post_title);
+        $postTitle = is_array($post) ? (isset($post['title']) ? $post['title'] : '') : $post->post_title;
+        $postId = is_array($post) ? (isset($post['id']) ? (int) $post['id'] : 0) : (int) $post->ID;
+        $candidate = normalize_lookup_value($postTitle);
         if ($candidate !== '' && (contains_text($candidate, $normalized) || contains_text($normalized, $candidate))) {
-            return (int) $post->ID;
+            return $postId;
         }
     }
 

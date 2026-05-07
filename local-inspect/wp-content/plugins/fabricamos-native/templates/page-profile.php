@@ -111,7 +111,7 @@ include __DIR__ . '/partials/page-start.php';
 							<span class="fab-chip" data-chip-id="<?php echo esc_attr( $substance['id'] ); ?>">
 								<span><?php echo esc_html( $substance['title'] ); ?></span>
 								<button type="button" class="fab-chip__remove" aria-label="Remover substância">×</button>
-								<input type="hidden" name="fab_substances[]" value="<?php echo esc_attr( $substance['id'] ); ?>" />
+								<input type="hidden" name="fab_substance_payload[]" value="<?php echo esc_attr( wp_json_encode( array( 'display_name' => $substance['title'], 'insumo' => isset( $substance['meta']['insumo'] ) ? $substance['meta']['insumo'] : '', 'dcb' => isset( $substance['meta']['dcb'] ) ? $substance['meta']['dcb'] : '', 'inn' => isset( $substance['meta']['inn'] ) ? $substance['meta']['inn'] : '', 'cas' => isset( $substance['meta']['cas'] ) ? $substance['meta']['cas'] : '', 'ncm' => isset( $substance['meta']['ncm'] ) ? $substance['meta']['ncm'] : '', 'cbpf' => isset( $substance['meta']['cbpf'] ) ? $substance['meta']['cbpf'] : '', 'validade' => isset( $substance['meta']['validade'] ) ? $substance['meta']['validade'] : '' ) ) ); ?>" />
 							</span>
 						<?php endforeach; ?>
 					</div>

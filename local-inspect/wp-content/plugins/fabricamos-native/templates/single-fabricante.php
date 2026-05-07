@@ -80,6 +80,12 @@ include __DIR__ . '/partials/page-start.php';
 						if ( ! empty( $substance['meta']['ncm'] ) ) {
 							$summary_parts[] = 'NCM: ' . $substance['meta']['ncm'];
 						}
+						if ( ! empty( $substance['meta']['cbpf'] ) ) {
+							$summary_parts[] = 'CBPF: ' . $substance['meta']['cbpf'];
+						}
+						if ( ! empty( $substance['meta']['validade'] ) ) {
+							$summary_parts[] = 'Validade: ' . $substance['meta']['validade'];
+						}
 						$summary_text = $headline;
 						if ( ! empty( $summary_parts ) ) {
 							$summary_text .= ' - ' . implode( ' | ', array_unique( $summary_parts ) );

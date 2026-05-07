@@ -152,7 +152,7 @@
 		}
 	}
 
-	function createChip(list, id, title) {
+	function createChip(list, id, title, payload) {
 		if (!list || !id || list.querySelector("[data-chip-id='" + id + "']")) {
 			return;
 		}
@@ -163,10 +163,10 @@
 		chip.innerHTML =
 			"<span></span>" +
 			'<button type="button" class="fab-chip__remove" aria-label="Remover substância">×</button>' +
-			'<input type="hidden" name="fab_substances[]" />';
+			'<input type="hidden" name="fab_substance_payload[]" />';
 
 		chip.querySelector("span").textContent = title;
-		chip.querySelector("input").value = id;
+		chip.querySelector("input").value = JSON.stringify(payload || { display_name: title });
 		list.appendChild(chip);
 	}
 
@@ -197,7 +197,7 @@
 				return item.meta && item.meta.dcb ? "DCB: " + item.meta.dcb : "Substância DSF";
 			},
 			onSelect: function (item, input, suggestions) {
-				createChip(chips, String(item.id), item.title);
+				createChip(chips, String(item.id), item.title, item.payload);
 				input.value = "";
 				hideSuggestions(suggestions);
 				input.focus();
@@ -586,7 +586,7 @@
 		}
 
 		function substanceCount() {
-			return chipList ? chipList.querySelectorAll("input[name='fab_substances[]']").length : 0;
+			return chipList ? chipList.querySelectorAll("input[name='fab_substance_payload[]'], input[name='fab_substances[]']").length : 0;
 		}
 
 		function validatePhone() {

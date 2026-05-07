@@ -1623,11 +1623,21 @@ class Fabricamos_Native {
 		$data   = array();
 
 		foreach ( $posts as $post ) {
-			$parsed = $this->parse_dsf_post( $post );
+			$parsed = isset( $post['meta'] ) ? $post['meta'] : $this->parse_dsf_post( $post );
 			$data[] = array(
-				'id'    => (int) $post->ID,
-				'title' => $post->post_title,
+				'id'    => isset( $post['id'] ) ? (string) $post['id'] : (int) $post->ID,
+				'title' => isset( $post['title'] ) ? $post['title'] : $post->post_title,
 				'meta'  => $parsed,
+				'payload' => array(
+					'display_name' => isset( $post['title'] ) ? $post['title'] : $post->post_title,
+					'insumo'       => isset( $parsed['insumo'] ) ? $parsed['insumo'] : '',
+					'dcb'          => isset( $parsed['dcb'] ) ? $parsed['dcb'] : '',
+					'inn'          => isset( $parsed['inn'] ) ? $parsed['inn'] : '',
+					'cas'          => isset( $parsed['cas'] ) ? $parsed['cas'] : '',
+					'ncm'          => isset( $parsed['ncm'] ) ? $parsed['ncm'] : '',
+					'cbpf'         => isset( $parsed['cbpf'] ) ? $parsed['cbpf'] : '',
+					'validade'     => isset( $parsed['validade'] ) ? $parsed['validade'] : '',
+				),
 			);
 		}
 
@@ -1677,11 +1687,21 @@ class Fabricamos_Native {
 		$data   = array();
 
 		foreach ( $posts as $post ) {
-			$parsed = $this->parse_dsf_post( $post );
+			$parsed = isset( $post['meta'] ) ? $post['meta'] : $this->parse_dsf_post( $post );
 			$data[] = array(
-				'id'    => (int) $post->ID,
-				'title' => $post->post_title,
+				'id'    => isset( $post['id'] ) ? (string) $post['id'] : (int) $post->ID,
+				'title' => isset( $post['title'] ) ? $post['title'] : $post->post_title,
 				'meta'  => $parsed,
+				'payload' => array(
+					'display_name' => isset( $post['title'] ) ? $post['title'] : $post->post_title,
+					'insumo'       => isset( $parsed['insumo'] ) ? $parsed['insumo'] : '',
+					'dcb'          => isset( $parsed['dcb'] ) ? $parsed['dcb'] : '',
+					'inn'          => isset( $parsed['inn'] ) ? $parsed['inn'] : '',
+					'cas'          => isset( $parsed['cas'] ) ? $parsed['cas'] : '',
+					'ncm'          => isset( $parsed['ncm'] ) ? $parsed['ncm'] : '',
+					'cbpf'         => isset( $parsed['cbpf'] ) ? $parsed['cbpf'] : '',
+					'validade'     => isset( $parsed['validade'] ) ? $parsed['validade'] : '',
+				),
 			);
 		}
 
@@ -2337,7 +2357,7 @@ class Fabricamos_Native {
 		$phone       = isset( $_POST['fab_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_phone'] ) ) : '';
 		$email       = isset( $_POST['fab_email'] ) ? sanitize_email( wp_unslash( $_POST['fab_email'] ) ) : '';
 		$site        = isset( $_POST['fab_site'] ) ? esc_url_raw( wp_unslash( $_POST['fab_site'] ) ) : '';
-		$substances  = isset( $_POST['fab_substances'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['fab_substances'] ) ) : array();
+		$substance_submission = $this->extract_substance_submission();
 
 		if ( '' !== $phone && ! $this->is_valid_phone( $phone ) ) {
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'invalid_phone', home_url( '/meu-fabricante/' ) ) );
@@ -2349,7 +2369,9 @@ class Fabricamos_Native {
 		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_phone', 'fab_phone', $phone );
 		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_email', 'fab_email', $email );
 		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_site', 'fab_site', $site );
-		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_substances', 'fab_substances', $substances );
+		$this->update_manufacturer_field( $manufacturer->ID, 'field_fab_substances', 'fab_substances', $substance_submission['matched_ids'] );
+		update_post_meta( $manufacturer->ID, 'fab_compiled_substances', $substance_submission['compiled'] );
+		update_post_meta( $manufacturer->ID, 'fab_catalog_items', $substance_submission['catalog_items'] );
 
 		$hero_result = $this->handle_manufacturer_image_update(
 			$manufacturer->ID,
@@ -2391,7 +2413,7 @@ class Fabricamos_Native {
 		$phone           = isset( $_POST['fab_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['fab_phone'] ) ) : '';
 		$email           = isset( $_POST['fab_email'] ) ? sanitize_email( wp_unslash( $_POST['fab_email'] ) ) : '';
 		$site            = isset( $_POST['fab_site'] ) ? esc_url_raw( wp_unslash( $_POST['fab_site'] ) ) : '';
-		$substances      = isset( $_POST['fab_substances'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['fab_substances'] ) ) : array();
+		$substance_submission = $this->extract_substance_submission();
 		$login_email     = isset( $_POST['panel_login_email'] ) ? sanitize_email( wp_unslash( $_POST['panel_login_email'] ) ) : '';
 		$login_password  = isset( $_POST['panel_login_password'] ) ? (string) wp_unslash( $_POST['panel_login_password'] ) : '';
 
@@ -2409,7 +2431,7 @@ class Fabricamos_Native {
 			exit;
 		}
 
-		if ( empty( $substances ) ) {
+		if ( empty( $substance_submission['catalog_items'] ) && empty( $substance_submission['matched_ids'] ) ) {
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'missing_substances', $this->panel_form_url( $manufacturer_id ) ) );
 			exit;
 		}
@@ -2456,7 +2478,9 @@ class Fabricamos_Native {
 		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_phone', 'fab_phone', $phone );
 		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_email', 'fab_email', $email );
 		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_site', 'fab_site', $site );
-		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_substances', 'fab_substances', $substances );
+		$this->update_manufacturer_field( $manufacturer_id, 'field_fab_substances', 'fab_substances', $substance_submission['matched_ids'] );
+		update_post_meta( $manufacturer_id, 'fab_compiled_substances', $substance_submission['compiled'] );
+		update_post_meta( $manufacturer_id, 'fab_catalog_items', $substance_submission['catalog_items'] );
 		if ( null !== $associate ) {
 			update_post_meta( $manufacturer_id, 'fab_associate_status', $associate );
 		}
@@ -2931,7 +2955,7 @@ class Fabricamos_Native {
 					'inn'           => $substance && ! empty( $substance['meta']['inn'] ) ? $substance['meta']['inn'] : '-',
 					'cas'           => $substance && ! empty( $substance['meta']['cas'] ) ? $substance['meta']['cas'] : '-',
 					'ncm'           => $substance && ! empty( $substance['meta']['ncm'] ) ? $substance['meta']['ncm'] : '-',
-					'certificate'   => '-',
+					'certificate'   => $substance && ! empty( $substance['meta']['cbpf'] ) ? $substance['meta']['cbpf'] : '-',
 					'contact_name'  => $detail['contact_name'] ? $detail['contact_name'] : '-',
 					'phone'         => $detail['phone'] ? $detail['phone'] : '-',
 					'email'         => $login_email ? $login_email : '-',
@@ -3010,26 +3034,157 @@ class Fabricamos_Native {
 		);
 	}
 
+	protected function get_manufacturer_catalog_items( $post_id ) {
+		$value = get_post_meta( $post_id, 'fab_catalog_items', true );
+
+		if ( is_string( $value ) ) {
+			$value = maybe_unserialize( $value );
+		}
+
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+
+		$items = array();
+		foreach ( $value as $index => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$title = '';
+			foreach ( array( 'display_name', 'inn', 'insumo', 'dcb' ) as $candidate ) {
+				if ( ! empty( $item[ $candidate ] ) ) {
+					$title = trim( (string) $item[ $candidate ] );
+					if ( '' !== $title ) {
+						break;
+					}
+				}
+			}
+
+			if ( '' === $title ) {
+				continue;
+			}
+
+			$meta = array(
+				'insumo'   => isset( $item['insumo'] ) ? trim( (string) $item['insumo'] ) : '',
+				'dcb'      => isset( $item['dcb'] ) ? trim( (string) $item['dcb'] ) : '',
+				'inn'      => isset( $item['inn'] ) ? trim( (string) $item['inn'] ) : '',
+				'cas'      => isset( $item['cas'] ) ? trim( (string) $item['cas'] ) : '',
+				'ncm'      => isset( $item['ncm'] ) ? trim( (string) $item['ncm'] ) : '',
+				'cbpf'     => isset( $item['cbpf'] ) ? trim( (string) $item['cbpf'] ) : '',
+				'validade' => isset( $item['validade'] ) ? trim( (string) $item['validade'] ) : '',
+			);
+
+			$items[] = array(
+				'id'      => 'catalog-' . $post_id . '-' . $index,
+				'title'   => $title,
+				'summary' => $this->format_substance_summary( $meta ),
+				'meta'    => $meta,
+			);
+		}
+
+		return $items;
+	}
+
+	protected function get_local_substance_library( $search = '', $limit = 6 ) {
+		$search      = trim( (string) $search );
+		$normalized  = $this->normalize_lookup_value( $search );
+		$posts       = get_posts(
+			array(
+				'post_type'      => 'fabricante',
+				'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			)
+		);
+		$results     = array();
+		$seen_titles = array();
+
+		foreach ( $posts as $post_id ) {
+			$local_items = $this->get_manufacturer_catalog_items( $post_id );
+
+			if ( empty( $local_items ) ) {
+				foreach ( $this->get_manufacturer_compiled_substances( $post_id ) as $index => $compiled_name ) {
+					$local_items[] = array(
+						'id'      => 'compiled-' . $post_id . '-' . $index,
+						'title'   => $compiled_name,
+						'summary' => '',
+						'meta'    => array(
+							'insumo'   => '',
+							'dcb'      => '',
+							'inn'      => '',
+							'cas'      => '',
+							'ncm'      => '',
+							'cbpf'     => '',
+							'validade' => '',
+						),
+					);
+				}
+			}
+
+			foreach ( $local_items as $item ) {
+				$title_key = $this->normalize_lookup_value( $item['title'] );
+				if ( '' === $title_key || isset( $seen_titles[ $title_key ] ) ) {
+					continue;
+				}
+
+				$haystack = $this->normalize_lookup_value(
+					implode(
+						' ',
+						array_filter(
+							array(
+								$item['title'],
+								isset( $item['meta']['insumo'] ) ? $item['meta']['insumo'] : '',
+								isset( $item['meta']['dcb'] ) ? $item['meta']['dcb'] : '',
+								isset( $item['meta']['inn'] ) ? $item['meta']['inn'] : '',
+								isset( $item['meta']['cas'] ) ? $item['meta']['cas'] : '',
+								isset( $item['meta']['ncm'] ) ? $item['meta']['ncm'] : '',
+							)
+						)
+					)
+				);
+
+				if ( '' !== $normalized && false === strpos( $haystack, $normalized ) ) {
+					continue;
+				}
+
+				$results[] = $item;
+				$seen_titles[ $title_key ] = true;
+
+				if ( count( $results ) >= $limit ) {
+					break 2;
+				}
+			}
+		}
+
+		return $results;
+	}
+
 	protected function get_manufacturer_panel_substances( $post_id ) {
+		$catalog_items = $this->get_manufacturer_catalog_items( $post_id );
+		if ( ! empty( $catalog_items ) ) {
+			return $catalog_items;
+		}
+
 		$compiled = $this->get_manufacturer_compiled_substances( $post_id );
 		if ( ! empty( $compiled ) ) {
 			$items = array();
-			foreach ( $compiled as $compiled_name ) {
-				$matched = $this->find_substance_post_by_name( $compiled_name );
-				$meta    = array(
-					'dcb' => '',
-					'inn' => '',
-					'cas' => '',
-					'ncm' => '',
-				);
-
-				if ( $matched instanceof WP_Post ) {
-					$meta = $this->parse_dsf_post( $matched );
-				}
-
+			foreach ( $compiled as $index => $compiled_name ) {
 				$items[] = array(
-					'title' => $compiled_name,
-					'meta'  => $meta,
+					'id'      => 'compiled-' . $post_id . '-' . $index,
+					'title'   => $compiled_name,
+					'summary' => '',
+					'meta'    => array(
+						'insumo'   => '',
+						'dcb'      => '',
+						'inn'      => '',
+						'cas'      => '',
+						'ncm'      => '',
+						'cbpf'     => '',
+						'validade' => '',
+					),
 				);
 			}
 
@@ -3046,7 +3201,7 @@ class Fabricamos_Native {
 			return null;
 		}
 
-		$posts      = $this->search_substances( $search, 10 );
+		$posts      = $this->search_dictionary_substances( $search, 10 );
 		$normalized = $this->normalize_lookup_value( $search );
 
 		foreach ( $posts as $post ) {
@@ -3157,8 +3312,7 @@ class Fabricamos_Native {
 			return 'Nenhuma substância encontrada para o termo informado.';
 		}
 
-		$parsed = $this->parse_dsf_post( $substances[0] );
-		return $this->format_substance_summary( $parsed );
+		return $this->format_substance_summary( $substances[0]['meta'] );
 	}
 
 	protected function search_manufacturer_ids( $filters ) {
@@ -3185,30 +3339,55 @@ class Fabricamos_Native {
 			);
 		}
 
-		if ( ! empty( $filters['substance'] ) ) {
-			$substances = $this->search_substances( $filters['substance'], 20 );
-			$ids        = wp_list_pluck( $substances, 'ID' );
+		$ids = get_posts( $args );
 
-			if ( empty( $ids ) ) {
-				return array();
-			}
-
-			$meta_query = array( 'relation' => 'OR' );
-			foreach ( $ids as $id ) {
-				$meta_query[] = array(
-					'key'     => 'fab_substances',
-					'value'   => '"' . (int) $id . '"',
-					'compare' => 'LIKE',
-				);
-			}
-			if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
-				$existing = $args['meta_query'];
-				$meta_query = array_merge( array( 'relation' => 'AND' ), array( $existing ), array( $meta_query ) );
-			}
-			$args['meta_query'] = $meta_query;
+		if ( empty( $filters['substance'] ) ) {
+			return $ids;
 		}
 
-		return get_posts( $args );
+		$matched = array();
+		foreach ( $ids as $post_id ) {
+			if ( $this->manufacturer_matches_substance_filter( $post_id, $filters['substance'] ) ) {
+				$matched[] = $post_id;
+			}
+		}
+
+		return $matched;
+	}
+
+	protected function manufacturer_matches_substance_filter( $post_id, $search ) {
+		$normalized_search = $this->normalize_lookup_value( $search );
+		if ( '' === $normalized_search ) {
+			return true;
+		}
+
+		foreach ( $this->get_manufacturer_panel_substances( $post_id ) as $item ) {
+			if ( empty( $item ) ) {
+				continue;
+			}
+
+			$haystack = $this->normalize_lookup_value(
+				implode(
+					' ',
+					array_filter(
+						array(
+							$item['title'],
+							isset( $item['meta']['insumo'] ) ? $item['meta']['insumo'] : '',
+							isset( $item['meta']['dcb'] ) ? $item['meta']['dcb'] : '',
+							isset( $item['meta']['inn'] ) ? $item['meta']['inn'] : '',
+							isset( $item['meta']['cas'] ) ? $item['meta']['cas'] : '',
+							isset( $item['meta']['ncm'] ) ? $item['meta']['ncm'] : '',
+						)
+					)
+				)
+			);
+
+			if ( false !== strpos( $haystack, $normalized_search ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public function get_manufacturer_card_data( $post ) {
@@ -3303,6 +3482,16 @@ class Fabricamos_Native {
 		$hero        = $this->get_manufacturer_image_data( $post->ID, 'fab_hero_image' );
 		$logo        = $this->get_manufacturer_image_data( $post->ID, 'fab_logo' );
 
+		if ( '' === trim( (string) $name ) ) {
+			$name = get_post_meta( $post->ID, 'fab_responsavel_nome', true );
+		}
+		if ( '' === trim( (string) $phone ) ) {
+			$phone = get_post_meta( $post->ID, 'fab_responsavel_telefone', true );
+		}
+		if ( '' === trim( (string) $email ) ) {
+			$email = get_post_meta( $post->ID, 'fab_responsavel_email', true );
+		}
+
 		return array(
 			'post'             => $post,
 			'title'            => get_the_title( $post ),
@@ -3325,6 +3514,34 @@ class Fabricamos_Native {
 	}
 
 	public function get_manufacturer_substances( $post_id ) {
+		$catalog_items = $this->get_manufacturer_catalog_items( $post_id );
+		if ( ! empty( $catalog_items ) ) {
+			return $catalog_items;
+		}
+
+		$compiled = $this->get_manufacturer_compiled_substances( $post_id );
+		if ( ! empty( $compiled ) ) {
+			$items = array();
+			foreach ( $compiled as $index => $compiled_name ) {
+				$items[] = array(
+					'id'      => 'compiled-' . $post_id . '-' . $index,
+					'title'   => $compiled_name,
+					'summary' => '',
+					'meta'    => array(
+						'insumo'   => '',
+						'dcb'      => '',
+						'inn'      => '',
+						'cas'      => '',
+						'ncm'      => '',
+						'cbpf'     => '',
+						'validade' => '',
+					),
+				);
+			}
+
+			return $items;
+		}
+
 		$ids = $this->get_manufacturer_substance_ids( $post_id );
 
 		$items = array();
@@ -3508,6 +3725,15 @@ SVG;
 	}
 
 	public function search_substances( $search, $limit = 6 ) {
+		$local_results = $this->get_local_substance_library( $search, $limit );
+		if ( ! empty( $local_results ) || '' === trim( (string) $search ) ) {
+			return $local_results;
+		}
+
+		return array();
+	}
+
+	public function search_dictionary_substances( $search, $limit = 6 ) {
 		if ( $search ) {
 			return $this->search_posts_by_title_prefix( 'post', array( 'draft', 'publish' ), $search, $limit );
 		}
@@ -3651,6 +3877,14 @@ SVG;
 			$parts[] = 'NCM: ' . $parsed['ncm'];
 		}
 
+		if ( ! empty( $parsed['cbpf'] ) ) {
+			$parts[] = 'CBPF: ' . $parsed['cbpf'];
+		}
+
+		if ( ! empty( $parsed['validade'] ) ) {
+			$parts[] = 'Validade: ' . $parsed['validade'];
+		}
+
 		return implode( ' | ', $parts );
 	}
 
@@ -3771,6 +4005,119 @@ SVG;
 		}
 
 		update_post_meta( $post_id, $field_name, $value );
+	}
+
+	protected function normalize_substance_submission_item( $item ) {
+		if ( is_string( $item ) ) {
+			$decoded = json_decode( $item, true );
+			if ( is_array( $decoded ) ) {
+				$item = $decoded;
+			} else {
+				$item = array(
+					'display_name' => trim( $item ),
+				);
+			}
+		}
+
+		if ( ! is_array( $item ) ) {
+			return null;
+		}
+
+		$title = '';
+		foreach ( array( 'display_name', 'title', 'inn', 'insumo', 'dcb' ) as $candidate ) {
+			if ( ! empty( $item[ $candidate ] ) ) {
+				$title = trim( (string) $item[ $candidate ] );
+				if ( '' !== $title ) {
+					break;
+				}
+			}
+		}
+
+		if ( '' === $title ) {
+			return null;
+		}
+
+		return array(
+			'insumo'       => isset( $item['insumo'] ) ? trim( (string) $item['insumo'] ) : '',
+			'dcb'          => isset( $item['dcb'] ) ? trim( (string) $item['dcb'] ) : '',
+			'inn'          => isset( $item['inn'] ) ? trim( (string) $item['inn'] ) : '',
+			'cas'          => isset( $item['cas'] ) ? trim( (string) $item['cas'] ) : '',
+			'ncm'          => isset( $item['ncm'] ) ? trim( (string) $item['ncm'] ) : '',
+			'cbpf'         => isset( $item['cbpf'] ) ? trim( (string) $item['cbpf'] ) : '',
+			'validade'     => isset( $item['validade'] ) ? trim( (string) $item['validade'] ) : '',
+			'display_name' => $title,
+		);
+	}
+
+	protected function extract_substance_submission() {
+		$payloads = isset( $_POST['fab_substance_payload'] ) ? (array) wp_unslash( $_POST['fab_substance_payload'] ) : array();
+		$names    = isset( $_POST['fab_substance_names'] ) ? (array) wp_unslash( $_POST['fab_substance_names'] ) : array();
+		$legacy   = isset( $_POST['fab_substances'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['fab_substances'] ) ) : array();
+		$items    = array();
+
+		foreach ( $payloads as $payload ) {
+			$normalized = $this->normalize_substance_submission_item( $payload );
+			if ( $normalized ) {
+				$items[] = $normalized;
+			}
+		}
+
+		foreach ( $names as $name ) {
+			$normalized = $this->normalize_substance_submission_item( $name );
+			if ( $normalized ) {
+				$items[] = $normalized;
+			}
+		}
+
+		$catalog_items = array();
+		$compiled      = array();
+		$matched_ids   = array();
+		$seen          = array();
+
+		foreach ( $items as $item ) {
+			$key = $this->normalize_lookup_value( $item['display_name'] );
+			if ( '' === $key || isset( $seen[ $key ] ) ) {
+				continue;
+			}
+
+			$seen[ $key ]    = true;
+			$catalog_items[] = $item;
+			$compiled[]      = $item['display_name'];
+
+			$matched = $this->find_substance_post_by_name( $item['display_name'] );
+			if ( $matched instanceof WP_Post ) {
+				$matched_ids[] = (int) $matched->ID;
+			}
+		}
+
+		if ( empty( $catalog_items ) && ! empty( $legacy ) ) {
+			$matched_ids = array_values( array_unique( array_filter( array_map( 'absint', $legacy ) ) ) );
+			foreach ( $matched_ids as $matched_id ) {
+				$post = get_post( $matched_id );
+				if ( ! $post instanceof WP_Post ) {
+					continue;
+				}
+
+				$meta = $this->parse_dsf_post( $post );
+				$catalog_items[] = array(
+					'insumo'       => '',
+					'dcb'          => isset( $meta['dcb'] ) ? $meta['dcb'] : '',
+					'inn'          => isset( $meta['inn'] ) ? $meta['inn'] : '',
+					'cas'          => isset( $meta['cas'] ) ? $meta['cas'] : '',
+					'ncm'          => isset( $meta['ncm'] ) ? $meta['ncm'] : '',
+					'cbpf'         => '',
+					'validade'     => '',
+					'display_name' => $post->post_title,
+				);
+				$compiled[] = $post->post_title;
+			}
+		}
+
+		return array(
+			'catalog_items' => $catalog_items,
+			'compiled'      => array_values( array_unique( array_filter( $compiled ) ) ),
+			'matched_ids'   => array_values( array_unique( array_map( 'absint', $matched_ids ) ) ),
+		);
 	}
 
 	protected function handle_manufacturer_image_update( $post_id, $field_key, $field_name, $file_key, $remove_key ) {
