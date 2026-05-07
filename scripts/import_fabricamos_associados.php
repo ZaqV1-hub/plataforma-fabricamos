@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 if ($argc < 3) {
     fwrite(STDERR, "Usage: php import_fabricamos_associados.php <wp-load.php> <json-file> [--match-dictionary] [--credentials-output=/path/to/file.csv] [--reset-existing-passwords] [--user-role=author]\n");
     exit(1);
@@ -54,27 +52,27 @@ $unmatchedSubstances = 0;
 $rowsImported = 0;
 
 foreach ($companies as $item) {
-    $company = normalize_text((string) ($item['company'] ?? ''));
+    $company = normalize_text((string) array_get($item, 'company', ''));
     if ($company === '') {
         continue;
     }
 
-    $processes = normalize_text_list((array) ($item['processes'] ?? array()));
-    $origins = normalize_text_list((array) ($item['origins'] ?? array()));
-    $catalogItems = normalize_catalog_items((array) ($item['catalog_items'] ?? array()));
-    $compiledSubstances = normalize_text_list((array) ($item['substances'] ?? array()));
+    $processes = normalize_text_list((array) array_get($item, 'processes', array()));
+    $origins = normalize_text_list((array) array_get($item, 'origins', array()));
+    $catalogItems = normalize_catalog_items((array) array_get($item, 'catalog_items', array()));
+    $compiledSubstances = normalize_text_list((array) array_get($item, 'substances', array()));
 
     if (empty($compiledSubstances) && ! empty($catalogItems)) {
         $compiledSubstances = derive_compiled_substances_from_catalog_items($catalogItems);
     }
 
-    $associateStatus = normalize_text((string) ($item['associate'] ?? 'Associado'));
-    $responsibleName = normalize_text((string) ($item['responsible_name'] ?? ''));
-    $responsiblePhone = normalize_text((string) ($item['responsible_phone'] ?? ''));
-    $responsibleEmail = normalize_text((string) ($item['responsible_email'] ?? ''));
-    $sourceWorkbook = normalize_text((string) ($item['source_workbook'] ?? ''));
-    $sourceSheet = normalize_text((string) ($item['source_sheet'] ?? ''));
-    $sourceUpdatedLabel = normalize_text((string) ($item['source_updated_label'] ?? ''));
+    $associateStatus = normalize_text((string) array_get($item, 'associate', 'Associado'));
+    $responsibleName = normalize_text((string) array_get($item, 'responsible_name', ''));
+    $responsiblePhone = normalize_text((string) array_get($item, 'responsible_phone', ''));
+    $responsibleEmail = normalize_text((string) array_get($item, 'responsible_email', ''));
+    $sourceWorkbook = normalize_text((string) array_get($item, 'source_workbook', ''));
+    $sourceSheet = normalize_text((string) array_get($item, 'source_sheet', ''));
+    $sourceUpdatedLabel = normalize_text((string) array_get($item, 'source_updated_label', ''));
 
     $editorAccount = ensure_editor_account(
         $responsibleName,
@@ -190,7 +188,7 @@ close_credentials_output($credentialsWriter);
 
 echo "SUMMARY|rows={$rowsImported}|created={$created}|updated={$updated}|users_created={$usersCreated}|users_updated={$usersUpdated}|passwords_generated={$passwordsGenerated}|matched_substances={$matchedSubstances}|unmatched_substances={$unmatchedSubstances}" . PHP_EOL;
 
-function parse_cli_options(array $args): array
+function parse_cli_options($args)
 {
     $options = array(
         'match_dictionary' => false,
@@ -210,12 +208,12 @@ function parse_cli_options(array $args): array
             continue;
         }
 
-        if (str_starts_with($arg, '--credentials-output=')) {
+        if (starts_with($arg, '--credentials-output=')) {
             $options['credentials_output'] = substr($arg, strlen('--credentials-output='));
             continue;
         }
 
-        if (str_starts_with($arg, '--user-role=')) {
+        if (starts_with($arg, '--user-role=')) {
             $options['user_role'] = substr($arg, strlen('--user-role='));
             continue;
         }
@@ -224,7 +222,7 @@ function parse_cli_options(array $args): array
     return $options;
 }
 
-function find_manufacturer_by_title(string $title): int
+function find_manufacturer_by_title($title)
 {
     $posts = get_posts(array(
         'post_type' => 'fabricante',
@@ -251,12 +249,12 @@ function find_manufacturer_by_title(string $title): int
 }
 
 function ensure_editor_account(
-    string $responsibleName,
-    string $responsibleEmail,
-    string $responsiblePhone,
-    string $preferredRole,
-    bool $resetExistingPasswords
-): array {
+    $responsibleName,
+    $responsibleEmail,
+    $responsiblePhone,
+    $preferredRole,
+    $resetExistingPasswords
+) {
     $emptyResult = array(
         'user_id' => 0,
         'username' => '',
@@ -346,7 +344,7 @@ function ensure_editor_account(
     );
 }
 
-function build_substance_index(): array
+function build_substance_index()
 {
     $posts = get_posts(array(
         'post_type' => 'post',
@@ -371,7 +369,7 @@ function build_substance_index(): array
     return $index;
 }
 
-function match_substance_post_id(string $name, array $index, Fabricamos_Native $fabricamos): int
+function match_substance_post_id($name, $index, $fabricamos)
 {
     $normalized = normalize_lookup_value($name);
     if ($normalized === '') {
@@ -399,7 +397,7 @@ function match_substance_post_id(string $name, array $index, Fabricamos_Native $
 
     foreach ($results as $post) {
         $candidate = normalize_lookup_value($post->post_title);
-        if ($candidate !== '' && (str_contains($candidate, $normalized) || str_contains($normalized, $candidate))) {
+        if ($candidate !== '' && (contains_text($candidate, $normalized) || contains_text($normalized, $candidate))) {
             return (int) $post->ID;
         }
     }
@@ -407,7 +405,7 @@ function match_substance_post_id(string $name, array $index, Fabricamos_Native $
     return 0;
 }
 
-function normalize_lookup_value(string $value): string
+function normalize_lookup_value($value)
 {
     $value = wp_strip_all_tags($value);
     $value = remove_accents($value);
@@ -417,14 +415,14 @@ function normalize_lookup_value(string $value): string
     return trim((string) $value);
 }
 
-function normalize_text(string $value): string
+function normalize_text($value)
 {
     $value = str_replace(array("\r", "\n"), ' ', $value);
     $value = preg_replace('/\s+/u', ' ', $value);
     return trim((string) $value);
 }
 
-function normalize_text_list(array $values): array
+function normalize_text_list($values)
 {
     $normalized = array();
     foreach ($values as $value) {
@@ -440,7 +438,7 @@ function normalize_text_list(array $values): array
     return $normalized;
 }
 
-function normalize_catalog_items(array $items): array
+function normalize_catalog_items($items)
 {
     $normalized = array();
 
@@ -450,14 +448,14 @@ function normalize_catalog_items(array $items): array
         }
 
         $catalogItem = array(
-            'insumo' => normalize_text((string) ($item['insumo'] ?? '')),
-            'dcb' => normalize_text((string) ($item['dcb'] ?? '')),
-            'inn' => normalize_text((string) ($item['inn'] ?? '')),
-            'cas' => normalize_text((string) ($item['cas'] ?? '')),
-            'ncm' => normalize_text((string) ($item['ncm'] ?? '')),
-            'cbpf' => normalize_text((string) ($item['cbpf'] ?? '')),
-            'validade' => normalize_text((string) ($item['validade'] ?? '')),
-            'display_name' => normalize_text((string) ($item['display_name'] ?? '')),
+            'insumo' => normalize_text((string) array_get($item, 'insumo', '')),
+            'dcb' => normalize_text((string) array_get($item, 'dcb', '')),
+            'inn' => normalize_text((string) array_get($item, 'inn', '')),
+            'cas' => normalize_text((string) array_get($item, 'cas', '')),
+            'ncm' => normalize_text((string) array_get($item, 'ncm', '')),
+            'cbpf' => normalize_text((string) array_get($item, 'cbpf', '')),
+            'validade' => normalize_text((string) array_get($item, 'validade', '')),
+            'display_name' => normalize_text((string) array_get($item, 'display_name', '')),
         );
 
         if (implode('', $catalogItem) === '') {
@@ -470,17 +468,17 @@ function normalize_catalog_items(array $items): array
     return $normalized;
 }
 
-function derive_compiled_substances_from_catalog_items(array $catalogItems): array
+function derive_compiled_substances_from_catalog_items($catalogItems)
 {
     $substances = array();
 
     foreach ($catalogItems as $item) {
-        $displayName = normalize_text((string) ($item['display_name'] ?? ''));
+        $displayName = normalize_text((string) array_get($item, 'display_name', ''));
         if ($displayName === '') {
-            $displayName = normalize_text((string) ($item['inn'] ?? ''));
+            $displayName = normalize_text((string) array_get($item, 'inn', ''));
         }
         if ($displayName === '') {
-            $displayName = normalize_text((string) ($item['insumo'] ?? ''));
+            $displayName = normalize_text((string) array_get($item, 'insumo', ''));
         }
         if ($displayName === '') {
             continue;
@@ -493,7 +491,7 @@ function derive_compiled_substances_from_catalog_items(array $catalogItems): arr
     return $substances;
 }
 
-function sync_post_meta_text(int $postId, string $metaKey, string $value): void
+function sync_post_meta_text($postId, $metaKey, $value)
 {
     if ($value === '') {
         delete_post_meta($postId, $metaKey);
@@ -503,7 +501,7 @@ function sync_post_meta_text(int $postId, string $metaKey, string $value): void
     update_post_meta($postId, $metaKey, $value);
 }
 
-function resolve_user_role(string $preferredRole): string
+function resolve_user_role($preferredRole)
 {
     $preferredRole = normalize_text($preferredRole);
     $roles = wp_roles()->roles;
@@ -521,7 +519,7 @@ function resolve_user_role(string $preferredRole): string
     return '';
 }
 
-function generate_unique_username(string $email, string $responsibleName): string
+function generate_unique_username($email, $responsibleName)
 {
     $candidates = array();
     $localPart = strstr($email, '@', true);
@@ -555,7 +553,7 @@ function generate_unique_username(string $email, string $responsibleName): strin
     return $fallback;
 }
 
-function open_credentials_output(?string $path): ?array
+function open_credentials_output($path)
 {
     if ($path === null || $path === '') {
         return null;
@@ -580,24 +578,24 @@ function open_credentials_output(?string $path): ?array
     );
 }
 
-function write_credentials_row(?array $writer, array $row): void
+function write_credentials_row($writer, $row)
 {
     if ($writer === null) {
         return;
     }
 
     fputcsv($writer['handle'], array(
-        $row['company'] ?? '',
-        $row['responsible_name'] ?? '',
-        $row['email'] ?? '',
-        $row['username'] ?? '',
-        $row['password'] ?? '',
-        $row['status'] ?? '',
-        $row['user_id'] ?? '',
+        array_get($row, 'company', ''),
+        array_get($row, 'responsible_name', ''),
+        array_get($row, 'email', ''),
+        array_get($row, 'username', ''),
+        array_get($row, 'password', ''),
+        array_get($row, 'status', ''),
+        array_get($row, 'user_id', ''),
     ));
 }
 
-function close_credentials_output(?array $writer): void
+function close_credentials_output($writer)
 {
     if ($writer === null) {
         return;
@@ -605,4 +603,23 @@ function close_credentials_output(?array $writer): void
 
     fclose($writer['handle']);
     echo "CREDENTIALS_FILE|{$writer['path']}" . PHP_EOL;
+}
+
+function array_get($array, $key, $defaultValue)
+{
+    if (! is_array($array) || ! array_key_exists($key, $array)) {
+        return $defaultValue;
+    }
+
+    return $array[$key];
+}
+
+function starts_with($text, $prefix)
+{
+    return strncmp($text, $prefix, strlen($prefix)) === 0;
+}
+
+function contains_text($text, $fragment)
+{
+    return $fragment !== '' && strpos($text, $fragment) !== false;
 }
