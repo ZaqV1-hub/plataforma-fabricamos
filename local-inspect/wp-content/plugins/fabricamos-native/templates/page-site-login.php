@@ -6,6 +6,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $fabricamos    = Fabricamos_Native::instance();
 $login_error   = isset( $_GET['login_error'] ) ? sanitize_text_field( wp_unslash( $_GET['login_error'] ) ) : '';
+$login_notice  = isset( $_GET['login_notice'] ) ? sanitize_text_field( wp_unslash( $_GET['login_notice'] ) ) : '';
+$login_hint    = isset( $_GET['login_hint'] ) ? sanitize_text_field( wp_unslash( $_GET['login_hint'] ) ) : '';
 $success_state = isset( $_GET[ Fabricamos_Native::QUERY_SUCCESS ] ) ? sanitize_text_field( wp_unslash( $_GET[ Fabricamos_Native::QUERY_SUCCESS ] ) ) : '';
 $page_title    = 'Entrar';
 $show_user     = false;
@@ -39,6 +41,12 @@ include __DIR__ . '/partials/page-start.php';
 					</div>
 				<?php endif; ?>
 
+				<?php if ( 'existing_account' === $login_notice ) : ?>
+					<div class="fab-alert fab-alert--success">
+						Ja existe uma conta com este e-mail. Entre com a senha ja cadastrada no Dicionario ou redefina sua senha.
+					</div>
+				<?php endif; ?>
+
 				<?php if ( $login_error ) : ?>
 					<div class="fab-alert fab-alert--error">
 						<?php
@@ -56,7 +64,7 @@ include __DIR__ . '/partials/page-start.php';
 					<?php wp_nonce_field( 'fabricamos_site_login', 'fabricamos_site_login_nonce' ); ?>
 
 					<label for="fab-site-log">Nome de usuário ou endereço de e-mail <span class="fab-req">*</span></label>
-					<input id="fab-site-log" class="fab-input fab-input--lg" type="text" name="log" required />
+					<input id="fab-site-log" class="fab-input fab-input--lg" type="text" name="log" value="<?php echo esc_attr( $login_hint ); ?>" required />
 
 					<label for="fab-site-pwd">Senha <span class="fab-req">*</span></label>
 					<input id="fab-site-pwd" class="fab-input fab-input--lg" type="password" name="pwd" required />

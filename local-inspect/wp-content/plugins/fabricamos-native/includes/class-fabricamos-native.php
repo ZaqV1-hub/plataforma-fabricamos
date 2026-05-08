@@ -613,6 +613,18 @@ class Fabricamos_Native {
 		return true;
 	}
 
+	protected function build_public_registration_profile_meta( $institution, $phone, $activity, $department, $job_title ) {
+		return array(
+			'dsf_institution_name'    => $institution,
+			'dsf_phone'               => $phone,
+			'dsf_activity_sector'     => $activity,
+			'dsf_department'          => $department,
+			'dsf_job_title'           => $job_title,
+			'dsf_privacy_accepted_at' => current_time( 'mysql' ),
+			'dsf_privacy_policy_url'  => $this->privacy_policy_url(),
+		);
+	}
+
 	public function get_dictionary_activity_options() {
 		return array(
 			'Agência Governamental',
@@ -1906,6 +1918,7 @@ class Fabricamos_Native {
 		if ( '' === $redirect_to ) {
 			$redirect_to = $this->public_catalog_url();
 		}
+		$profile_meta = $this->build_public_registration_profile_meta( $institution, $phone, $activity, $department, $job_title );
 
 		if ( '' === $first_name || '' === $last_name || '' === $email || '' === $password || '' === $institution || '' === $phone || '' === $activity || '' === $department || '' === $job_title ) {
 			$this->log_registration_debug(
@@ -2015,7 +2028,20 @@ class Fabricamos_Native {
 						'message' => $remote_error->get_error_message(),
 					)
 				);
-				wp_safe_redirect( add_query_arg( 'register_error', $this->map_public_register_error_code( $remote_error ), $redirect ) );
+				$register_error = $this->map_public_register_error_code( $remote_error );
+
+				if ( 'exists' === $register_error ) {
+					$login_result = $sso->remote_login( $email, $password, true );
+					if ( ! is_wp_error( $login_result ) && $sso->set_public_session_from_response( $login_result ) ) {
+						$this->persist_public_registration_profile( $email, $profile_meta );
+						wp_safe_redirect( $redirect_to );
+						exit;
+					}
+
+					$this->redirect_existing_public_account_to_login( $email, $redirect_to );
+				}
+
+				wp_safe_redirect( add_query_arg( 'register_error', $register_error, $redirect ) );
 				exit;
 			}
 
@@ -2024,24 +2050,26 @@ class Fabricamos_Native {
 				exit;
 			}
 
-			$this->persist_public_registration_profile(
-				$email,
-				array(
-					'dsf_institution_name'    => $institution,
-					'dsf_phone'               => $phone,
-					'dsf_activity_sector'     => $activity,
-					'dsf_department'          => $department,
-					'dsf_job_title'           => $job_title,
-					'dsf_privacy_accepted_at' => current_time( 'mysql' ),
-					'dsf_privacy_policy_url'  => $this->privacy_policy_url(),
-				)
-			);
+			$this->persist_public_registration_profile( $email, $profile_meta );
 
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'registered', $redirect_to ) );
 			exit;
 		}
 
-		if ( email_exists( $email ) ) {
+		$existing_user = get_user_by( 'email', $email );
+		if ( $existing_user instanceof WP_User ) {
+			if ( $this->is_public_site_user( $existing_user ) ) {
+				$authenticated_user = wp_authenticate( (string) $existing_user->user_login, $password );
+				if ( $authenticated_user instanceof WP_User && $this->is_public_site_user( $authenticated_user ) ) {
+					$this->sync_existing_public_user_profile( $authenticated_user, $first_name, $last_name, $profile_meta );
+					$this->establish_public_site_session( $authenticated_user, true );
+					wp_safe_redirect( $redirect_to );
+					exit;
+				}
+
+				$this->redirect_existing_public_account_to_login( $email, $redirect_to );
+			}
+
 			wp_safe_redirect( add_query_arg( 'register_error', 'exists', $redirect ) );
 			exit;
 		}
@@ -2060,17 +2088,17 @@ class Fabricamos_Native {
 		);
 
 		if ( is_wp_error( $user_id ) ) {
+			if ( in_array( (string) $user_id->get_error_code(), array( 'existing_user_email', 'existing_user_login' ), true ) ) {
+				$this->redirect_existing_public_account_to_login( $email, $redirect_to );
+			}
+
 			wp_safe_redirect( add_query_arg( 'register_error', 'error', $redirect ) );
 			exit;
 		}
 
-		update_user_meta( $user_id, 'dsf_institution_name', $institution );
-		update_user_meta( $user_id, 'dsf_phone', $phone );
-		update_user_meta( $user_id, 'dsf_activity_sector', $activity );
-		update_user_meta( $user_id, 'dsf_department', $department );
-		update_user_meta( $user_id, 'dsf_job_title', $job_title );
-		update_user_meta( $user_id, 'dsf_privacy_accepted_at', current_time( 'mysql' ) );
-		update_user_meta( $user_id, 'dsf_privacy_policy_url', $this->privacy_policy_url() );
+		foreach ( $profile_meta as $meta_key => $meta_value ) {
+			update_user_meta( $user_id, $meta_key, $meta_value );
+		}
 
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user instanceof WP_User ) {
@@ -2095,6 +2123,43 @@ class Fabricamos_Native {
 		wp_set_auth_cookie( $user->ID, true, is_ssl() );
 		do_action( 'wp_login', $user->user_login, $user );
 		$this->public_auth_cookie_expiration = 0;
+	}
+
+	protected function redirect_existing_public_account_to_login( $email, $redirect_to = '' ) {
+		$args = array(
+			'login_notice' => 'existing_account',
+		);
+
+		$email = sanitize_email( (string) $email );
+		if ( '' !== $email ) {
+			$args['login_hint'] = $email;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, $this->site_login_url( $redirect_to ) ) );
+		exit;
+	}
+
+	protected function sync_existing_public_user_profile( WP_User $user, $first_name, $last_name, $meta ) {
+		$display_name = trim( $first_name . ' ' . $last_name );
+		$payload      = array(
+			'ID'         => (int) $user->ID,
+			'first_name' => $first_name,
+			'last_name'  => $last_name,
+		);
+
+		if ( '' !== $display_name ) {
+			$payload['display_name'] = $display_name;
+		}
+
+		wp_update_user( $payload );
+
+		foreach ( (array) $meta as $meta_key => $meta_value ) {
+			if ( '' === (string) $meta_key || null === $meta_value || '' === $meta_value ) {
+				continue;
+			}
+
+			update_user_meta( (int) $user->ID, (string) $meta_key, $meta_value );
+		}
 	}
 
 	protected function normalize_remote_registration_error( $result ) {
