@@ -2430,7 +2430,6 @@ class Fabricamos_Native {
 			'' === $description ||
 			'' === $editor_name ||
 			'' === $editor_phone ||
-			'' === $editor_email ||
 			'' === $login_email ||
 			( ! $manufacturer_id && '' === $login_password )
 		) {
@@ -2443,12 +2442,15 @@ class Fabricamos_Native {
 			exit;
 		}
 
-		if ( '' !== $editor_phone && ! $this->is_valid_phone( $editor_phone ) ) {
+		if (
+			( '' !== $editor_phone && ! $this->is_valid_phone( $editor_phone ) ) ||
+			( '' !== $phone && ! $this->is_valid_phone( $phone ) )
+		) {
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'invalid_phone', $this->panel_form_url( $manufacturer_id ) ) );
 			exit;
 		}
 
-		if ( ! is_email( $editor_email ) || ! is_email( $login_email ) || ( '' !== $email && ! is_email( $email ) ) ) {
+		if ( ( '' !== $editor_email && ! is_email( $editor_email ) ) || ! is_email( $login_email ) || ( '' !== $email && ! is_email( $email ) ) ) {
 			wp_safe_redirect( add_query_arg( self::QUERY_SUCCESS, 'invalid_email', $this->panel_form_url( $manufacturer_id ) ) );
 			exit;
 		}
@@ -2962,12 +2964,12 @@ class Fabricamos_Native {
 					'associate'     => $associate ? $associate : '-',
 					'process'       => $process ? $process : '-',
 					'origin'        => $origin ? $origin : '-',
-					'substance'     => $substance ? $substance['title'] : '-',
-					'dcb'           => $substance && ! empty( $substance['meta']['dcb'] ) ? $substance['meta']['dcb'] : '-',
-					'inn'           => $substance && ! empty( $substance['meta']['inn'] ) ? $substance['meta']['inn'] : '-',
-					'cas'           => $substance && ! empty( $substance['meta']['cas'] ) ? $substance['meta']['cas'] : '-',
-					'ncm'           => $substance && ! empty( $substance['meta']['ncm'] ) ? $substance['meta']['ncm'] : '-',
-					'certificate'   => $substance && ! empty( $substance['meta']['cbpf'] ) ? $substance['meta']['cbpf'] : '-',
+					'substance'     => $substance ? $this->panel_catalog_value( $substance['title'] ) : '-',
+					'dcb'           => $substance ? $this->panel_catalog_value( isset( $substance['meta']['dcb'] ) ? $substance['meta']['dcb'] : '' ) : '-',
+					'inn'           => $substance ? $this->panel_catalog_value( isset( $substance['meta']['inn'] ) ? $substance['meta']['inn'] : '' ) : '-',
+					'cas'           => $substance ? $this->panel_catalog_value( isset( $substance['meta']['cas'] ) ? $substance['meta']['cas'] : '' ) : '-',
+					'ncm'           => $substance ? $this->panel_catalog_value( isset( $substance['meta']['ncm'] ) ? $substance['meta']['ncm'] : '' ) : '-',
+					'certificate'   => $substance ? $this->panel_catalog_value( isset( $substance['meta']['cbpf'] ) ? $substance['meta']['cbpf'] : '' ) : '-',
 					'contact_name'  => $editor['name'] ? $editor['name'] : '-',
 					'phone'         => $editor['phone'] ? $editor['phone'] : '-',
 					'email'         => $login_email ? $login_email : '-',
@@ -3024,6 +3026,32 @@ class Fabricamos_Native {
 		return is_string( $value ) ? trim( $value ) : '';
 	}
 
+	protected function is_placeholder_catalog_value( $value ) {
+		$normalized = $this->normalize_lookup_value( trim( (string) $value ) );
+		return in_array(
+			$normalized,
+			array(
+				'',
+				'n/a',
+				'n/a - significa nao se aplica',
+				'nao aplicavel',
+				'nao se aplica',
+				'nao possui',
+			),
+			true
+		);
+	}
+
+	protected function clean_catalog_value( $value ) {
+		$text = trim( (string) $value );
+		return $this->is_placeholder_catalog_value( $text ) ? '' : $text;
+	}
+
+	protected function panel_catalog_value( $value ) {
+		$text = $this->clean_catalog_value( $value );
+		return '' === $text ? '-' : $text;
+	}
+
 	protected function get_manufacturer_compiled_substances( $post_id ) {
 		$value = get_post_meta( $post_id, 'fab_compiled_substances', true );
 
@@ -3038,8 +3066,8 @@ class Fabricamos_Native {
 		return array_values(
 			array_filter(
 				array_map(
-					static function ( $item ) {
-						return is_string( $item ) ? trim( $item ) : '';
+					function ( $item ) {
+						return is_string( $item ) ? $this->clean_catalog_value( $item ) : '';
 					},
 					$value
 				)
@@ -3065,9 +3093,9 @@ class Fabricamos_Native {
 			}
 
 			$title = '';
-			foreach ( array( 'display_name', 'inn', 'insumo', 'dcb' ) as $candidate ) {
+			foreach ( array( 'insumo', 'display_name', 'dcb', 'inn' ) as $candidate ) {
 				if ( ! empty( $item[ $candidate ] ) ) {
-					$title = trim( (string) $item[ $candidate ] );
+					$title = $this->clean_catalog_value( $item[ $candidate ] );
 					if ( '' !== $title ) {
 						break;
 					}
@@ -3079,13 +3107,13 @@ class Fabricamos_Native {
 			}
 
 			$meta = array(
-				'insumo'   => isset( $item['insumo'] ) ? trim( (string) $item['insumo'] ) : '',
-				'dcb'      => isset( $item['dcb'] ) ? trim( (string) $item['dcb'] ) : '',
-				'inn'      => isset( $item['inn'] ) ? trim( (string) $item['inn'] ) : '',
-				'cas'      => isset( $item['cas'] ) ? trim( (string) $item['cas'] ) : '',
-				'ncm'      => isset( $item['ncm'] ) ? trim( (string) $item['ncm'] ) : '',
-				'cbpf'     => isset( $item['cbpf'] ) ? trim( (string) $item['cbpf'] ) : '',
-				'validade' => isset( $item['validade'] ) ? trim( (string) $item['validade'] ) : '',
+				'insumo'   => isset( $item['insumo'] ) ? $this->clean_catalog_value( $item['insumo'] ) : '',
+				'dcb'      => isset( $item['dcb'] ) ? $this->clean_catalog_value( $item['dcb'] ) : '',
+				'inn'      => isset( $item['inn'] ) ? $this->clean_catalog_value( $item['inn'] ) : '',
+				'cas'      => isset( $item['cas'] ) ? $this->clean_catalog_value( $item['cas'] ) : '',
+				'ncm'      => isset( $item['ncm'] ) ? $this->clean_catalog_value( $item['ncm'] ) : '',
+				'cbpf'     => isset( $item['cbpf'] ) ? $this->clean_catalog_value( $item['cbpf'] ) : '',
+				'validade' => isset( $item['validade'] ) ? $this->clean_catalog_value( $item['validade'] ) : '',
 			);
 
 			$items[] = array(
@@ -3935,28 +3963,35 @@ SVG;
 	public function format_substance_summary( $parsed ) {
 		$parts = array();
 
-		if ( ! empty( $parsed['dcb'] ) ) {
-			$parts[] = 'DCB: ' . $parsed['dcb'];
+		$dcb = isset( $parsed['dcb'] ) ? $this->clean_catalog_value( $parsed['dcb'] ) : '';
+		$inn = isset( $parsed['inn'] ) ? $this->clean_catalog_value( $parsed['inn'] ) : '';
+		$cas = isset( $parsed['cas'] ) ? $this->clean_catalog_value( $parsed['cas'] ) : '';
+		$ncm = isset( $parsed['ncm'] ) ? $this->clean_catalog_value( $parsed['ncm'] ) : '';
+		$cbpf = isset( $parsed['cbpf'] ) ? $this->clean_catalog_value( $parsed['cbpf'] ) : '';
+		$validade = isset( $parsed['validade'] ) ? $this->clean_catalog_value( $parsed['validade'] ) : '';
+
+		if ( '' !== $dcb ) {
+			$parts[] = 'DCB: ' . $dcb;
 		}
 
-		if ( ! empty( $parsed['inn'] ) ) {
-			$parts[] = 'INN: ' . $parsed['inn'];
+		if ( '' !== $inn ) {
+			$parts[] = 'INN: ' . $inn;
 		}
 
-		if ( ! empty( $parsed['cas'] ) ) {
-			$parts[] = 'CAS: ' . $parsed['cas'];
+		if ( '' !== $cas ) {
+			$parts[] = 'CAS: ' . $cas;
 		}
 
-		if ( ! empty( $parsed['ncm'] ) ) {
-			$parts[] = 'NCM: ' . $parsed['ncm'];
+		if ( '' !== $ncm ) {
+			$parts[] = 'NCM: ' . $ncm;
 		}
 
-		if ( ! empty( $parsed['cbpf'] ) ) {
-			$parts[] = 'CBPF: ' . $parsed['cbpf'];
+		if ( '' !== $cbpf ) {
+			$parts[] = 'CBPF: ' . $cbpf;
 		}
 
-		if ( ! empty( $parsed['validade'] ) ) {
-			$parts[] = 'Validade: ' . $parsed['validade'];
+		if ( '' !== $validade ) {
+			$parts[] = 'Validade: ' . $validade;
 		}
 
 		return implode( ' | ', $parts );
@@ -4098,9 +4133,9 @@ SVG;
 		}
 
 		$title = '';
-		foreach ( array( 'display_name', 'title', 'inn', 'insumo', 'dcb' ) as $candidate ) {
+		foreach ( array( 'insumo', 'display_name', 'title', 'dcb', 'inn' ) as $candidate ) {
 			if ( ! empty( $item[ $candidate ] ) ) {
-				$title = trim( (string) $item[ $candidate ] );
+				$title = $this->clean_catalog_value( $item[ $candidate ] );
 				if ( '' !== $title ) {
 					break;
 				}
@@ -4112,13 +4147,13 @@ SVG;
 		}
 
 		return array(
-			'insumo'       => isset( $item['insumo'] ) ? trim( (string) $item['insumo'] ) : '',
-			'dcb'          => isset( $item['dcb'] ) ? trim( (string) $item['dcb'] ) : '',
-			'inn'          => isset( $item['inn'] ) ? trim( (string) $item['inn'] ) : '',
-			'cas'          => isset( $item['cas'] ) ? trim( (string) $item['cas'] ) : '',
-			'ncm'          => isset( $item['ncm'] ) ? trim( (string) $item['ncm'] ) : '',
-			'cbpf'         => isset( $item['cbpf'] ) ? trim( (string) $item['cbpf'] ) : '',
-			'validade'     => isset( $item['validade'] ) ? trim( (string) $item['validade'] ) : '',
+			'insumo'       => isset( $item['insumo'] ) ? $this->clean_catalog_value( $item['insumo'] ) : '',
+			'dcb'          => isset( $item['dcb'] ) ? $this->clean_catalog_value( $item['dcb'] ) : '',
+			'inn'          => isset( $item['inn'] ) ? $this->clean_catalog_value( $item['inn'] ) : '',
+			'cas'          => isset( $item['cas'] ) ? $this->clean_catalog_value( $item['cas'] ) : '',
+			'ncm'          => isset( $item['ncm'] ) ? $this->clean_catalog_value( $item['ncm'] ) : '',
+			'cbpf'         => isset( $item['cbpf'] ) ? $this->clean_catalog_value( $item['cbpf'] ) : '',
+			'validade'     => isset( $item['validade'] ) ? $this->clean_catalog_value( $item['validade'] ) : '',
 			'display_name' => $title,
 		);
 	}

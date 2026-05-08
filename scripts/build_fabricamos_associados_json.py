@@ -17,20 +17,23 @@ import pandas as pd
 SOURCE_SHEET = "Fabricamos IFAS"
 LEGEND_COMPANIES = {
     "Legenda",
-    "Não associados e sem CBPF",
+    "Nao associados e sem CBPF",
     "CBPF Vencido",
-    "Dado não encontrado",
-    "N/A - Significa Não se Aplica",
-    "Ainda não conseguimos o contato",
+    "Dado nao encontrado",
+    "N/A - Significa Nao se Aplica",
+    "Ainda nao conseguimos o contato",
 }
 PLACEHOLDER_VALUES = {
     "",
     "nan",
     "n/a",
-    "não aplicável",
+    "n/a - significa nao se aplica",
+    "nao aplicavel",
+    "nao se aplica",
+    "nao possui",
 }
 COMPANY_REPLACEMENTS = {
-    "cristalia produtos quimicos farmaceutico ltda.": "CRISTÁLIA PRODUTOS QUÍMICOS FARMACEUTICOS Ltda.",
+    "cristalia produtos quimicos farmaceutico ltda.": "CRISTALIA PRODUTOS QUIMICOS FARMACEUTICOS Ltda.",
 }
 
 
@@ -39,11 +42,11 @@ def parse_args() -> argparse.Namespace:
         description="Converte a planilha do Fabricamos em JSON consolidado por fabricante."
     )
     parser.add_argument("input", help="Caminho para a planilha .xlsx")
-    parser.add_argument("output", help="Caminho do JSON de saída")
+    parser.add_argument("output", help="Caminho do JSON de saida")
     parser.add_argument(
         "--sheet",
         default=SOURCE_SHEET,
-        help=f"Nome da planilha a ler. Padrão: {SOURCE_SHEET!r}",
+        help=f"Nome da planilha a ler. Padrao: {SOURCE_SHEET!r}",
     )
     return parser.parse_args()
 
@@ -81,6 +84,11 @@ def is_placeholder(value: str) -> bool:
     return normalize_key(value) in PLACEHOLDER_VALUES
 
 
+def clean_catalog_value(value: object) -> str:
+    text = clean_scalar(value)
+    return "" if is_placeholder(text) else text
+
+
 def is_associated_status(value: str) -> bool:
     normalized = normalize_key(value)
     return bool(normalized) and normalized.startswith("associado")
@@ -91,11 +99,13 @@ def append_unique(target: list[str], value: str) -> None:
         target.append(value)
 
 
-def preferred_substance_name(inn: str, insumo: str) -> str:
-    if inn and not is_placeholder(inn):
-        return inn
+def preferred_substance_name(insumo: str, inn: str, dcb: str) -> str:
     if insumo and not is_placeholder(insumo):
         return insumo
+    if dcb and not is_placeholder(dcb):
+        return dcb
+    if inn and not is_placeholder(inn):
+        return inn
     return ""
 
 
@@ -162,17 +172,17 @@ def main() -> None:
 
         process = clean_scalar(row["processo"])
         origin = clean_scalar(row["origem"])
-        insumo = clean_scalar(row["insumo"])
-        dcb = clean_scalar(row["dcb"])
-        inn = clean_scalar(row["inn"])
-        cas = clean_scalar(row["cas"])
-        ncm = clean_scalar(row["ncm"])
-        cbpf = clean_scalar(row["cbpf"])
-        validade = clean_scalar(row["validade"])
+        insumo = clean_catalog_value(row["insumo"])
+        dcb = clean_catalog_value(row["dcb"])
+        inn = clean_catalog_value(row["inn"])
+        cas = clean_catalog_value(row["cas"])
+        ncm = clean_catalog_value(row["ncm"])
+        cbpf = clean_catalog_value(row["cbpf"])
+        validade = clean_catalog_value(row["validade"])
         responsible_name = clean_scalar(row["responsavel"])
         responsible_phone = clean_scalar(row["telefone"])
         responsible_email = clean_scalar(row["email"])
-        display_name = preferred_substance_name(inn, insumo)
+        display_name = preferred_substance_name(insumo, inn, dcb)
 
         if associate and not item["associate"]:
             item["associate"] = associate

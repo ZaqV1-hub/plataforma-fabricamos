@@ -65,9 +65,6 @@ include __DIR__ . '/partials/page-start.php';
 						<?php
 						$headline      = $substance['title'];
 						$summary_parts = array();
-						if ( ! empty( $substance['meta']['inn'] ) && 0 !== strcasecmp( $substance['meta']['inn'], $headline ) ) {
-							$headline .= ' (' . $substance['meta']['inn'] . ')';
-						}
 						if ( ! empty( $substance['meta']['dcb'] ) && 0 !== strcasecmp( $substance['meta']['dcb'], $substance['title'] ) ) {
 							$summary_parts[] = 'DCB: ' . $substance['meta']['dcb'];
 						}

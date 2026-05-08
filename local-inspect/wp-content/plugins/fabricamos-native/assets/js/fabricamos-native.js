@@ -489,7 +489,7 @@
 
 		form.setAttribute("novalidate", "novalidate");
 
-		const phoneInput = form.querySelector("[name='fab_phone']");
+		const phoneFields = Array.from(form.querySelectorAll("input[type='tel']"));
 		const substancesInput = form.querySelector("[data-fab-substance-search]");
 		const chipList = form.querySelector("[data-fab-chip-list]");
 		const fields = Array.from(
@@ -599,8 +599,8 @@
 				return true;
 			}
 
-			if (field === phoneInput) {
-				validatePhone();
+			if (phoneFields.indexOf(field) !== -1) {
+				validatePhoneField(field);
 			}
 
 			if (field === substancesInput) {
@@ -626,15 +626,15 @@
 			return chipList ? chipList.querySelectorAll("input[name='fab_substance_payload[]'], input[name='fab_substances[]']").length : 0;
 		}
 
-		function validatePhone() {
-			if (!phoneInput) {
+		function validatePhoneField(field) {
+			if (!field) {
 				return true;
 			}
 
-			const digits = (phoneInput.value || "").replace(/\D+/g, "");
-			const valid = digits.length >= 10 && digits.length <= 13;
+			const digits = (field.value || "").replace(/\D+/g, "");
+			const valid = digits.length === 0 ? !field.required : digits.length >= 10 && digits.length <= 13;
 
-			phoneInput.setCustomValidity(valid ? "" : "Informe um telefone completo com DDD.");
+			field.setCustomValidity(valid ? "" : "Informe um telefone completo com DDD.");
 			return valid;
 		}
 
@@ -648,18 +648,18 @@
 			return valid;
 		}
 
-		if (phoneInput) {
-			phoneInput.addEventListener("input", function () {
+		phoneFields.forEach(function (field) {
+			field.addEventListener("input", function () {
 				if (hasAttemptedSubmit) {
-					validateField(phoneInput);
+					validateField(field);
 				}
 			});
-			phoneInput.addEventListener("blur", function () {
+			field.addEventListener("blur", function () {
 				if (hasAttemptedSubmit) {
-					validateField(phoneInput);
+					validateField(field);
 				}
 			});
-		}
+		});
 
 		if (substancesInput) {
 			substancesInput.addEventListener("input", function () {
@@ -680,7 +680,7 @@
 		}
 
 		fields.forEach(function (field) {
-			if (field === phoneInput || field === substancesInput) {
+			if (phoneFields.indexOf(field) !== -1 || field === substancesInput) {
 				return;
 			}
 

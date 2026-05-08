@@ -139,7 +139,7 @@ include __DIR__ . '/partials/page-start.php';
 						</div>
 						<div class="fab-form-stack">
 							<label class="fab-label-strong" for="fab-editor-email">E-mail do responsável</label>
-							<input id="fab-editor-email" class="fab-input" name="fab_editor_email" type="email" value="<?php echo esc_attr( $context['editor_email'] ); ?>" required />
+							<input id="fab-editor-email" class="fab-input" name="fab_editor_email" type="email" value="<?php echo esc_attr( $context['editor_email'] ); ?>" />
 						</div>
 					</div>
 				</div>
