@@ -468,6 +468,12 @@ function find_manufacturer_by_title($title)
         if (in_array((string) $post->post_title, $titles, true)) {
             $score += 100;
         }
+        if (manufacturer_has_image_value($post->ID, 'fab_logo')) {
+            $score += 80;
+        }
+        if (manufacturer_has_image_value($post->ID, 'fab_hero_image')) {
+            $score += 70;
+        }
         if ((int) get_post_thumbnail_id($post->ID) > 0) {
             $score += 50;
         }
@@ -506,11 +512,74 @@ function deactivate_duplicate_manufacturers($primaryId, $title)
         }
 
         if (normalize_title_lookup($post->post_title) === $normalizedPrimary) {
+            merge_manufacturer_visual_assets($primaryId, (int) $post->ID);
             wp_update_post(array(
                 'ID' => (int) $post->ID,
                 'post_status' => 'draft',
             ));
         }
+    }
+}
+
+function manufacturer_has_image_value($postId, $metaKey)
+{
+    $value = get_post_meta((int) $postId, $metaKey, true);
+
+    if (is_array($value)) {
+        if (!empty($value['ID']) || !empty($value['id']) || !empty($value['url'])) {
+            return true;
+        }
+    }
+
+    if (is_numeric($value) && (int) $value > 0) {
+        return true;
+    }
+
+    return is_string($value) && trim($value) !== '';
+}
+
+function manufacturer_get_image_value($postId, $metaKey)
+{
+    return get_post_meta((int) $postId, $metaKey, true);
+}
+
+function manufacturer_copy_meta_if_empty($targetId, $sourceId, $metaKey)
+{
+    $targetValue = manufacturer_get_image_value($targetId, $metaKey);
+    $sourceValue = manufacturer_get_image_value($sourceId, $metaKey);
+
+    if (!manufacturer_has_image_value($sourceId, $metaKey)) {
+        return;
+    }
+
+    if (manufacturer_has_image_value($targetId, $metaKey)) {
+        return;
+    }
+
+    update_post_meta((int) $targetId, $metaKey, $sourceValue);
+}
+
+function merge_manufacturer_visual_assets($primaryId, $duplicateId)
+{
+    $primaryId = (int) $primaryId;
+    $duplicateId = (int) $duplicateId;
+
+    if ($primaryId <= 0 || $duplicateId <= 0 || $primaryId === $duplicateId) {
+        return;
+    }
+
+    manufacturer_copy_meta_if_empty($primaryId, $duplicateId, 'fab_logo');
+    manufacturer_copy_meta_if_empty($primaryId, $duplicateId, 'fab_hero_image');
+
+    if ((int) get_post_thumbnail_id($primaryId) <= 0) {
+        $duplicateThumbnailId = (int) get_post_thumbnail_id($duplicateId);
+        if ($duplicateThumbnailId > 0) {
+            set_post_thumbnail($primaryId, $duplicateThumbnailId);
+        }
+    }
+
+    if (!manufacturer_has_image_value($primaryId, 'fab_logo') && manufacturer_has_image_value($primaryId, 'fab_hero_image')) {
+        update_post_meta($primaryId, 'fab_logo', manufacturer_get_image_value($primaryId, 'fab_hero_image'));
     }
 }
 
