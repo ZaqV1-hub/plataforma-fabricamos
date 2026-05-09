@@ -114,6 +114,7 @@ class Fabricamos_Native {
 		add_action( 'admin_post_fabricamos_panel_export', array( $this, 'handle_panel_export' ) );
 		add_filter( 'show_admin_bar', array( $this, 'maybe_hide_admin_bar' ) );
 		add_filter( 'auth_cookie_expiration', array( $this, 'filter_auth_cookie_expiration' ), 10, 3 );
+		add_filter( 'document_title_parts', array( $this, 'filter_document_title_parts' ) );
 	}
 
 	public function register_role() {
@@ -3535,7 +3536,7 @@ class Fabricamos_Native {
 
 		return array(
 			'id'             => $manufacturer instanceof WP_Post ? (int) $manufacturer->ID : 0,
-			'title'          => $manufacturer instanceof WP_Post ? get_the_title( $manufacturer ) : '',
+			'title'          => $manufacturer instanceof WP_Post ? $this->get_manufacturer_display_title( $manufacturer ) : '',
 			'associate'      => $manufacturer instanceof WP_Post ? $this->get_manufacturer_meta_text( $manufacturer->ID, 'fab_associate_status' ) : '',
 			'process'        => $manufacturer instanceof WP_Post ? $this->get_manufacturer_meta_text( $manufacturer->ID, 'fab_processo' ) : '',
 			'origin'         => $manufacturer instanceof WP_Post ? $this->get_manufacturer_meta_text( $manufacturer->ID, 'fab_origem' ) : '',
@@ -3556,6 +3557,20 @@ class Fabricamos_Native {
 			'is_edit'        => $manufacturer instanceof WP_Post,
 			'processes'      => $this->get_available_processes(),
 		);
+	}
+
+	public function filter_document_title_parts( $parts ) {
+		if ( ! is_array( $parts ) || ! is_singular( 'fabricante' ) ) {
+			return $parts;
+		}
+
+		$post = get_queried_object();
+		if ( ! $post instanceof WP_Post ) {
+			return $parts;
+		}
+
+		$parts['title'] = $this->get_manufacturer_display_title( $post );
+		return $parts;
 	}
 
 	public function get_manufacturer_sector_slug( $post_id ) {
