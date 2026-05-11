@@ -1798,8 +1798,8 @@ class Fabricamos_Native {
 		foreach ( $posts as $post ) {
 			$data[] = array(
 				'id'     => (int) $post->ID,
-				'title'  => get_the_title( $post ),
-				'url'    => get_permalink( $post ),
+				'title'  => $this->get_manufacturer_display_title( $post ),
+				'url'    => $this->get_manufacturer_view_url( $post, 'catalogo' ),
 				'sector' => $this->get_manufacturer_sector_name( $post->ID ),
 			);
 		}
@@ -1866,8 +1866,8 @@ class Fabricamos_Native {
 		foreach ( $posts as $post ) {
 			$data[] = array(
 				'id'     => (int) $post->ID,
-				'title'  => get_the_title( $post ),
-				'url'    => get_permalink( $post ),
+				'title'  => $this->get_manufacturer_display_title( $post ),
+				'url'    => $this->get_manufacturer_view_url( $post, 'catalogo' ),
 				'sector' => $this->get_manufacturer_sector_name( $post->ID ),
 			);
 		}
@@ -3488,7 +3488,7 @@ class Fabricamos_Native {
 					'password'      => $has_password ? '••••••' : '-',
 					'password_raw'  => $password_raw,
 					'edit_url'      => $this->panel_form_url( $manufacturer->ID ),
-					'delete_target' => get_the_title( $manufacturer ),
+					'delete_target' => $this->get_manufacturer_display_title( $manufacturer ),
 				);
 			}
 		}

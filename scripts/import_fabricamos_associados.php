@@ -486,7 +486,11 @@ function find_manufacturer_by_title($title)
 
     foreach ($posts as $post) {
         $normalizedTitle = normalize_title_lookup($post->post_title);
-        if ($normalizedTitle === '' || ! in_array($normalizedTitle, $normalizedCandidates, true)) {
+        $normalizedMetaTitle = normalize_title_lookup((string) get_post_meta((int) $post->ID, 'fab_company_name', true));
+        if (
+            ($normalizedTitle === '' || ! in_array($normalizedTitle, $normalizedCandidates, true)) &&
+            ($normalizedMetaTitle === '' || ! in_array($normalizedMetaTitle, $normalizedCandidates, true))
+        ) {
             continue;
         }
 
@@ -544,7 +548,13 @@ function deactivate_duplicate_manufacturers($primaryId, $title)
             continue;
         }
 
-        if (in_array(normalize_title_lookup($post->post_title), $normalizedCandidates, true)) {
+        $normalizedTitle = normalize_title_lookup($post->post_title);
+        $normalizedMetaTitle = normalize_title_lookup((string) get_post_meta((int) $post->ID, 'fab_company_name', true));
+
+        if (
+            in_array($normalizedTitle, $normalizedCandidates, true) ||
+            in_array($normalizedMetaTitle, $normalizedCandidates, true)
+        ) {
             merge_manufacturer_visual_assets($primaryId, (int) $post->ID);
             wp_update_post(array(
                 'ID' => (int) $post->ID,
