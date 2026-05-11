@@ -2322,6 +2322,38 @@ class Fabricamos_Native {
 		return null;
 	}
 
+	protected function normalize_remote_password_reset_error( $result ) {
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		if ( ! is_array( $result ) ) {
+			return new WP_Error( 'invalid_remote_response', 'Resposta invalida da redefinicao remota.', array( 'status' => 502 ) );
+		}
+
+		if ( ! empty( $result['_transport_error'] ) ) {
+			return new WP_Error( 'remote_transport_error', (string) $result['_transport_error'], array( 'status' => 502 ) );
+		}
+
+		$status = isset( $result['_http_status'] ) ? (int) $result['_http_status'] : 200;
+		if ( $status >= 400 || ! empty( $result['code'] ) ) {
+			$code    = ! empty( $result['code'] ) ? sanitize_key( (string) $result['code'] ) : 'remote_password_reset_error';
+			$message = ! empty( $result['message'] ) ? (string) $result['message'] : 'Nao foi possivel sincronizar a redefinicao da senha.';
+			$data    = isset( $result['data'] ) && is_array( $result['data'] ) ? $result['data'] : array();
+			if ( $status > 0 && empty( $data['status'] ) ) {
+				$data['status'] = $status;
+			}
+
+			return new WP_Error( $code, $message, $data );
+		}
+
+		if ( isset( $result['success'] ) && ! $result['success'] ) {
+			return new WP_Error( 'remote_password_reset_error', 'Nao foi possivel sincronizar a redefinicao da senha.', array( 'status' => 502 ) );
+		}
+
+		return null;
+	}
+
 	protected function build_registration_confirmation_headers() {
 		return array(
 			'Content-Type: text/html; charset=UTF-8',
@@ -2528,6 +2560,23 @@ class Fabricamos_Native {
 		if ( $password !== $password_confirm ) {
 			wp_safe_redirect( add_query_arg( 'password_error', 'confirm', $reset_url ) );
 			exit;
+		}
+
+		$sso = $this->public_sso();
+		if ( $sso && method_exists( $sso, 'remote_reset_password' ) ) {
+			$remote_identifier = sanitize_email( (string) $user->user_email );
+			if ( '' === $remote_identifier ) {
+				$remote_identifier = (string) $user->user_login;
+			}
+
+			$remote_error = $this->normalize_remote_password_reset_error(
+				$sso->remote_reset_password( $remote_identifier, $password )
+			);
+
+			if ( $remote_error instanceof WP_Error ) {
+				wp_safe_redirect( add_query_arg( 'password_error', 'sync', $reset_url ) );
+				exit;
+			}
 		}
 
 		reset_password( $user, $password );

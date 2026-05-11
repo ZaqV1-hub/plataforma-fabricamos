@@ -46,6 +46,8 @@ include __DIR__ . '/partials/page-start.php';
 							echo esc_html( 'A senha precisa ter pelo menos 8 caracteres.' );
 						} elseif ( 'confirm' === $password_error ) {
 							echo esc_html( 'As senhas informadas nao conferem.' );
+						} elseif ( 'sync' === $password_error ) {
+							echo esc_html( 'Nao foi possivel sincronizar sua nova senha com o login principal. Tente novamente em instantes.' );
 						} else {
 							echo esc_html( 'Nao foi possivel redefinir a senha.' );
 						}
