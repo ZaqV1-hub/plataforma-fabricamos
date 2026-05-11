@@ -1316,25 +1316,65 @@ class Fabricamos_Native {
 		return true;
 	}
 
-	protected function get_manufacturer_by_login( $login ) {
+	protected function get_manufacturers_by_login( $login ) {
 		$login = trim( (string) $login );
 		if ( '' === $login ) {
-			return null;
+			return array();
 		}
 
 		$posts = get_posts(
 			array(
 				'post_type'      => 'fabricante',
 				'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
-				'posts_per_page' => 1,
+				'posts_per_page' => -1,
 				'meta_key'       => 'fab_login_email',
 				'meta_value'     => sanitize_email( $login ),
-				'orderby'        => 'ID',
-				'order'          => 'ASC',
+				'orderby'        => array(
+					'post_status' => 'ASC',
+					'ID'          => 'DESC',
+				),
 			)
 		);
 
+		return is_array( $posts ) ? $posts : array();
+	}
+
+	protected function get_manufacturer_by_login( $login ) {
+		$posts = $this->get_manufacturers_by_login( $login );
+
 		return empty( $posts ) ? null : $posts[0];
+	}
+
+	protected function get_manufacturer_by_login_and_password( $login, $password ) {
+		$posts = $this->get_manufacturers_by_login( $login );
+		if ( empty( $posts ) ) {
+			return null;
+		}
+
+		$fallback = null;
+		foreach ( $posts as $post ) {
+			if ( ! $post instanceof WP_Post ) {
+				continue;
+			}
+
+			$hash = (string) get_post_meta( $post->ID, 'fab_login_password_hash', true );
+			if ( '' === $hash ) {
+				if ( null === $fallback ) {
+					$fallback = $post;
+				}
+				continue;
+			}
+
+			if ( wp_check_password( (string) $password, $hash ) ) {
+				return $post;
+			}
+
+			if ( null === $fallback ) {
+				$fallback = $post;
+			}
+		}
+
+		return $fallback;
 	}
 
 	public function handle_legacy_routes() {
@@ -1801,7 +1841,7 @@ class Fabricamos_Native {
 		$login    = isset( $_POST['fabricamos_login_user'] ) ? sanitize_text_field( wp_unslash( $_POST['fabricamos_login_user'] ) ) : ( isset( $_POST['log'] ) ? sanitize_text_field( wp_unslash( $_POST['log'] ) ) : '' );
 		$password = isset( $_POST['fabricamos_login_pass'] ) ? (string) wp_unslash( $_POST['fabricamos_login_pass'] ) : ( isset( $_POST['pwd'] ) ? (string) wp_unslash( $_POST['pwd'] ) : '' );
 		$remember = ! empty( $_POST['rememberme'] );
-		$post     = $this->get_manufacturer_by_login( $login );
+		$post     = $this->get_manufacturer_by_login_and_password( $login, $password );
 
 		if ( ! $post instanceof WP_Post ) {
 			wp_safe_redirect( add_query_arg( 'login_error', 'invalid', $redirect ) );
