@@ -3535,7 +3535,7 @@ class Fabricamos_Native {
 
 	protected function get_manufacturer_meta_text( $post_id, $key ) {
 		$value = get_post_meta( $post_id, $key, true );
-		return is_string( $value ) ? trim( $value ) : '';
+		return is_string( $value ) ? trim( $this->repair_mojibake_text( $value ) ) : '';
 	}
 
 	protected function is_placeholder_catalog_value( $value ) {
