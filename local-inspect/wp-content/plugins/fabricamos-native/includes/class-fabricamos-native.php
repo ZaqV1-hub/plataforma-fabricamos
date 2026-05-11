@@ -486,7 +486,9 @@ class Fabricamos_Native {
 	public function is_public_site_authenticated() {
 		$sso = $this->public_sso();
 		if ( $sso ) {
-			return $sso->is_public_authenticated();
+			if ( $sso->is_public_authenticated() ) {
+				return true;
+			}
 		}
 
 		return $this->is_public_site_user( wp_get_current_user() );
@@ -1351,7 +1353,8 @@ class Fabricamos_Native {
 			return null;
 		}
 
-		$fallback = null;
+		$matches  = array();
+		$fallback = array();
 		foreach ( $posts as $post ) {
 			if ( ! $post instanceof WP_Post ) {
 				continue;
@@ -1359,22 +1362,55 @@ class Fabricamos_Native {
 
 			$hash = (string) get_post_meta( $post->ID, 'fab_login_password_hash', true );
 			if ( '' === $hash ) {
-				if ( null === $fallback ) {
-					$fallback = $post;
-				}
+				$fallback[] = $post;
 				continue;
 			}
 
 			if ( wp_check_password( (string) $password, $hash ) ) {
-				return $post;
+				$matches[] = $post;
+				continue;
 			}
 
-			if ( null === $fallback ) {
-				$fallback = $post;
-			}
+			$fallback[] = $post;
 		}
 
-		return $fallback;
+		if ( ! empty( $matches ) ) {
+			usort(
+				$matches,
+				function ( $left, $right ) {
+					$left_score  = $this->get_manufacturer_preference_score( $left );
+					$right_score = $this->get_manufacturer_preference_score( $right );
+
+					if ( $left_score === $right_score ) {
+						return (int) $right->ID - (int) $left->ID;
+					}
+
+					return $right_score - $left_score;
+				}
+			);
+
+			return $matches[0];
+		}
+
+		if ( empty( $fallback ) ) {
+			return null;
+		}
+
+		usort(
+			$fallback,
+			function ( $left, $right ) {
+				$left_score  = $this->get_manufacturer_preference_score( $left );
+				$right_score = $this->get_manufacturer_preference_score( $right );
+
+				if ( $left_score === $right_score ) {
+					return (int) $right->ID - (int) $left->ID;
+				}
+
+				return $right_score - $left_score;
+			}
+		);
+
+		return $fallback[0];
 	}
 
 	public function handle_legacy_routes() {
@@ -1878,13 +1914,10 @@ class Fabricamos_Native {
 		$sso = $this->public_sso();
 		if ( $sso && method_exists( $sso, 'remote_login' ) && method_exists( $sso, 'set_public_session_from_response' ) ) {
 			$result = $sso->remote_login( $login, $password, $remember );
-			if ( is_wp_error( $result ) || ! $sso->set_public_session_from_response( $result ) ) {
-				wp_safe_redirect( add_query_arg( 'login_error', 'invalid', $redirect ) );
+			if ( ! is_wp_error( $result ) && $sso->set_public_session_from_response( $result ) ) {
+				wp_safe_redirect( $redirect_to );
 				exit;
 			}
-
-			wp_safe_redirect( $redirect_to );
-			exit;
 		}
 
 		if ( is_email( $login ) ) {
