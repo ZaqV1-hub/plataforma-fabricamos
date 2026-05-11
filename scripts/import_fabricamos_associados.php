@@ -254,6 +254,14 @@ function canonical_company_name($title)
     }
 
     $normalized = normalize_title_lookup($title);
+    if (strpos($normalized, 'libbs') !== false) {
+        return 'LIBBS FARMACÊUTICA Ltda.';
+    }
+
+    if (strpos($normalized, 'microbiol') !== false && strpos($normalized, 'fcta') !== false) {
+        return 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.';
+    }
+
     $aliases = array(
         'libbs farmacasutica ltda.' => 'LIBBS FARMACÊUTICA Ltda.',
         'libbs farmaceutica ltda.' => 'LIBBS FARMACÊUTICA Ltda.',
@@ -275,18 +283,19 @@ function manufacturer_title_aliases($title)
 {
     $canonical = canonical_company_name($title);
     $aliases = array($canonical);
+    $canonical_key = normalize_title_lookup($canonical);
 
-    if ($canonical === 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACEUTICOS Ltda.') {
+    if ($canonical_key === 'cristalia produtos quimicos farmaceuticos ltda.') {
         $aliases[] = 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACĘUTICO Ltda.';
         $aliases[] = 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACÊUTICO Ltda.';
     }
 
-    if ($canonical === 'LIBBS FARMACÊUTICA Ltda.') {
+    if (strpos($canonical_key, 'libbs') !== false) {
         $aliases[] = 'LIBBS FARMACASUTICA Ltda.';
         $aliases[] = 'Libbs Farmacasutica Ltda.';
     }
 
-    if ($canonical === 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.') {
+    if (strpos($canonical_key, 'microbiol') !== false && strpos($canonical_key, 'fcta') !== false) {
         $aliases[] = 'MICROBIOLAGICA QUAIMICA e Fcta Ltda.';
         $aliases[] = 'MICROBIOLÓGICA QUÃMICA e Fcta Ltda.';
         $aliases[] = 'MICROBIOLÓGICA QUÍMICA e FARMACÊUTICA';

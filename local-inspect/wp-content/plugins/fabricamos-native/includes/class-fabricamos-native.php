@@ -3783,6 +3783,14 @@ class Fabricamos_Native {
 		$normalized = preg_replace( '/\s+/', ' ', $normalized );
 		$normalized = trim( (string) $normalized );
 
+		if ( false !== strpos( $normalized, 'libbs' ) ) {
+			return 'LIBBS FARMACÊUTICA Ltda.';
+		}
+
+		if ( false !== strpos( $normalized, 'microbiol' ) && false !== strpos( $normalized, 'fcta' ) ) {
+			return 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.';
+		}
+
 		$aliases = array(
 			'libbs farmacasutica ltda.'               => 'LIBBS FARMACÊUTICA Ltda.',
 			'libbs farmaceutica ltda.'                => 'LIBBS FARMACÊUTICA Ltda.',
