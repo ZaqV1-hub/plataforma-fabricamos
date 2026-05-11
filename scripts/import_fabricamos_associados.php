@@ -253,6 +253,21 @@ function canonical_company_name($title)
         return 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACEUTICOS Ltda.';
     }
 
+    $normalized = normalize_title_lookup($title);
+    $aliases = array(
+        'libbs farmacasutica ltda.' => 'LIBBS FARMACÊUTICA Ltda.',
+        'libbs farmaceutica ltda.' => 'LIBBS FARMACÊUTICA Ltda.',
+        'libbs farmaceutica' => 'LIBBS FARMACÊUTICA Ltda.',
+        'microbiolagica quaimica e fcta ltda.' => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+        'microbiologica quaimica e fcta ltda.' => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+        'microbiologica quimica e fcta ltda.' => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+        'microbiologica quimica e farmaceutica' => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+    );
+
+    if (isset($aliases[$normalized])) {
+        return $aliases[$normalized];
+    }
+
     return $title;
 }
 
@@ -264,6 +279,17 @@ function manufacturer_title_aliases($title)
     if ($canonical === 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACEUTICOS Ltda.') {
         $aliases[] = 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACĘUTICO Ltda.';
         $aliases[] = 'CRISTÁLIA PRODUTOS QUÍMICOS FARMACÊUTICO Ltda.';
+    }
+
+    if ($canonical === 'LIBBS FARMACÊUTICA Ltda.') {
+        $aliases[] = 'LIBBS FARMACASUTICA Ltda.';
+        $aliases[] = 'Libbs Farmacasutica Ltda.';
+    }
+
+    if ($canonical === 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.') {
+        $aliases[] = 'MICROBIOLAGICA QUAIMICA e Fcta Ltda.';
+        $aliases[] = 'MICROBIOLÓGICA QUÃMICA e Fcta Ltda.';
+        $aliases[] = 'MICROBIOLÓGICA QUÍMICA e FARMACÊUTICA';
     }
 
     return array_values(array_unique($aliases));
@@ -492,8 +518,15 @@ function find_manufacturer_by_title($title)
 
 function deactivate_duplicate_manufacturers($primaryId, $title)
 {
-    $normalizedPrimary = normalize_title_lookup($title);
-    if ($normalizedPrimary === '') {
+    $titles = manufacturer_title_aliases($title);
+    $normalizedCandidates = array();
+
+    foreach ($titles as $candidateTitle) {
+        $normalizedCandidates[] = normalize_title_lookup($candidateTitle);
+    }
+
+    $normalizedCandidates = array_values(array_unique(array_filter($normalizedCandidates)));
+    if (empty($normalizedCandidates)) {
         return;
     }
 
@@ -511,7 +544,7 @@ function deactivate_duplicate_manufacturers($primaryId, $title)
             continue;
         }
 
-        if (normalize_title_lookup($post->post_title) === $normalizedPrimary) {
+        if (in_array(normalize_title_lookup($post->post_title), $normalizedCandidates, true)) {
             merge_manufacturer_visual_assets($primaryId, (int) $post->ID);
             wp_update_post(array(
                 'ID' => (int) $post->ID,

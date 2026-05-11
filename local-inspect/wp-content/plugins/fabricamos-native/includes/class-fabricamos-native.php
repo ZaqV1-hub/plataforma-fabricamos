@@ -3660,10 +3660,33 @@ class Fabricamos_Native {
 	}
 
 	protected function normalize_lookup_value( $value ) {
-		$value = $this->repair_mojibake_text( (string) $value );
+		$value = $this->canonical_manufacturer_alias( $this->repair_mojibake_text( (string) $value ) );
 		$value = strtolower( remove_accents( wp_strip_all_tags( (string) $value ) ) );
 		$value = preg_replace( '/\s+/', ' ', $value );
 		return trim( (string) $value );
+	}
+
+	protected function canonical_manufacturer_alias( $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		$normalized = strtolower( remove_accents( wp_strip_all_tags( $this->repair_mojibake_text( $value ) ) ) );
+		$normalized = preg_replace( '/\s+/', ' ', $normalized );
+		$normalized = trim( (string) $normalized );
+
+		$aliases = array(
+			'libbs farmacasutica ltda.'               => 'LIBBS FARMACÊUTICA Ltda.',
+			'libbs farmaceutica ltda.'                => 'LIBBS FARMACÊUTICA Ltda.',
+			'libbs farmaceutica'                      => 'LIBBS FARMACÊUTICA Ltda.',
+			'microbiolagica quaimica e fcta ltda.'    => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+			'microbiologica quaimica e fcta ltda.'    => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+			'microbiologica quimica e fcta ltda.'     => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+			'microbiologica quimica e farmaceutica'   => 'MICROBIOLÓGICA QUÍMICA e Fcta Ltda.',
+		);
+
+		return isset( $aliases[ $normalized ] ) ? $aliases[ $normalized ] : $value;
 	}
 
 	protected function repair_mojibake_text( $value ) {
@@ -3790,7 +3813,7 @@ class Fabricamos_Native {
 			$title = get_the_title( $post );
 		}
 
-		return $this->repair_mojibake_text( $title );
+		return $this->canonical_manufacturer_alias( $this->repair_mojibake_text( $title ) );
 	}
 
 	protected function get_preferred_manufacturer_post( $post ) {
@@ -4167,6 +4190,18 @@ class Fabricamos_Native {
 	}
 
 	public function get_manufacturer_card_data( $post ) {
+		$post = $this->get_preferred_manufacturer_post( $post );
+		if ( ! $post instanceof WP_Post ) {
+			return array(
+				'id'        => 0,
+				'title'     => '',
+				'url'       => home_url( '/catalogo/' ),
+				'image'     => $this->placeholder_image_url(),
+				'has_image' => false,
+				'process'   => '',
+			);
+		}
+
 		$logo = $this->get_manufacturer_image_data( $post->ID, 'fab_logo' );
 		$hero = $this->get_manufacturer_image_data( $post->ID, 'fab_hero_image' );
 		$image = ! empty( $hero['url'] ) ? $hero : $logo;
@@ -4189,7 +4224,7 @@ class Fabricamos_Native {
 	}
 
 	public function get_manufacturer_view_url( $post, $context = 'catalogo' ) {
-		$post = $post instanceof WP_Post ? $post : get_post( $post );
+		$post = $this->get_preferred_manufacturer_post( $post );
 		if ( ! $post instanceof WP_Post ) {
 			return home_url( '/catalogo/' );
 		}
