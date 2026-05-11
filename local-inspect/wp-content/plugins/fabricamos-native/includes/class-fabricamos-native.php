@@ -1219,7 +1219,11 @@ class Fabricamos_Native {
 		}
 
 		$post = get_post( $manufacturer_id );
-		return $post instanceof WP_Post ? $post : null;
+		if ( ! $post instanceof WP_Post ) {
+			return null;
+		}
+
+		return $this->get_preferred_manufacturer_post( $post );
 	}
 
 	public function is_manufacturer_authenticated() {
@@ -3789,6 +3793,70 @@ class Fabricamos_Native {
 		return $this->repair_mojibake_text( $title );
 	}
 
+	protected function get_preferred_manufacturer_post( $post ) {
+		$post = $post instanceof WP_Post ? $post : get_post( $post );
+		if ( ! $post instanceof WP_Post ) {
+			return null;
+		}
+
+		$candidates = array(
+			(int) $post->ID => $post,
+		);
+
+		$login_email = $this->get_manufacturer_login_email( $post->ID );
+		if ( '' !== $login_email ) {
+			foreach ( $this->get_manufacturers_by_login( $login_email ) as $candidate ) {
+				if ( $candidate instanceof WP_Post ) {
+					$candidates[ (int) $candidate->ID ] = $candidate;
+				}
+			}
+		}
+
+		$normalized_title = $this->normalize_lookup_value( $this->get_manufacturer_display_title( $post ) );
+		if ( '' !== $normalized_title ) {
+			$related_posts = get_posts(
+				array(
+					'post_type'      => 'fabricante',
+					'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+					'posts_per_page' => -1,
+					'orderby'        => array(
+						'post_status' => 'ASC',
+						'ID'          => 'DESC',
+					),
+				)
+			);
+
+			foreach ( $related_posts as $candidate ) {
+				if ( ! $candidate instanceof WP_Post ) {
+					continue;
+				}
+
+				if ( $this->normalize_lookup_value( $this->get_manufacturer_display_title( $candidate ) ) !== $normalized_title ) {
+					continue;
+				}
+
+				$candidates[ (int) $candidate->ID ] = $candidate;
+			}
+		}
+
+		$candidates = array_values( $candidates );
+		usort(
+			$candidates,
+			function ( $left, $right ) {
+				$left_score  = $this->get_manufacturer_preference_score( $left );
+				$right_score = $this->get_manufacturer_preference_score( $right );
+
+				if ( $left_score === $right_score ) {
+					return (int) $right->ID - (int) $left->ID;
+				}
+
+				return $right_score - $left_score;
+			}
+		);
+
+		return empty( $candidates ) ? $post : $candidates[0];
+	}
+
 	protected function get_manufacturer_preference_score( $post ) {
 		$post = $post instanceof WP_Post ? $post : get_post( $post );
 		if ( ! $post instanceof WP_Post ) {
@@ -3798,6 +3866,8 @@ class Fabricamos_Native {
 		$score = 0;
 		$title = (string) $post->post_title;
 		$display_title = $this->get_manufacturer_display_title( $post );
+		$description = trim( (string) $this->get_manufacturer_field( $post->ID, 'fab_description' ) );
+		$company_name = trim( (string) get_post_meta( $post->ID, 'fab_company_name', true ) );
 
 		if ( has_post_thumbnail( $post ) ) {
 			$score += 100;
@@ -3811,6 +3881,14 @@ class Fabricamos_Native {
 		$hero = $this->get_manufacturer_image_data( $post->ID, 'fab_hero_image' );
 		if ( ! empty( $hero['url'] ) ) {
 			$score += 50;
+		}
+
+		if ( '' !== $description ) {
+			$score += 40;
+		}
+
+		if ( '' !== $company_name ) {
+			$score += 25;
 		}
 
 		if ( ! $this->contains_mojibake_text( $title ) ) {
@@ -4172,6 +4250,11 @@ class Fabricamos_Native {
 	}
 
 	public function get_manufacturer_detail( $post ) {
+		$post = $this->get_preferred_manufacturer_post( $post );
+		if ( ! $post instanceof WP_Post ) {
+			return array();
+		}
+
 		$description = $this->get_manufacturer_field( $post->ID, 'fab_description' );
 		$name        = $this->get_manufacturer_field( $post->ID, 'fab_contact_name' );
 		$phone       = $this->get_manufacturer_field( $post->ID, 'fab_phone' );
@@ -4179,6 +4262,7 @@ class Fabricamos_Native {
 		$site        = $this->get_manufacturer_field( $post->ID, 'fab_site' );
 		$hero        = $this->get_manufacturer_image_data( $post->ID, 'fab_hero_image' );
 		$logo        = $this->get_manufacturer_image_data( $post->ID, 'fab_logo' );
+		$primary     = ! empty( $hero['url'] ) ? $hero : $logo;
 		$editor      = $this->get_manufacturer_editor_detail( $post->ID );
 
 		return array(
@@ -4192,8 +4276,8 @@ class Fabricamos_Native {
 			'editor_phone'     => $editor['phone'],
 			'editor_email'     => $editor['email'],
 			'site'             => $site,
-			'hero_image'       => ! empty( $hero['url'] ) ? $hero['url'] : $this->placeholder_image_url(),
-			'has_hero_image'   => ! empty( $hero['url'] ),
+			'hero_image'       => ! empty( $primary['url'] ) ? $primary['url'] : $this->placeholder_image_url(),
+			'has_hero_image'   => ! empty( $primary['url'] ),
 			'logo_image'       => ! empty( $logo['url'] ) ? $logo['url'] : $this->placeholder_image_url(),
 			'has_logo_image'   => ! empty( $logo['url'] ),
 			'image_placeholder'=> $this->placeholder_image_url(),

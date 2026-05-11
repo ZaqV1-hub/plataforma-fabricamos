@@ -21,6 +21,9 @@ include __DIR__ . '/partials/page-start.php';
 				<h1 class="fab-screen-title"><?php echo esc_html( 'Editar fabricante' ); ?></h1>
 				<span class="fab-line"></span>
 			</div>
+			<?php if ( $detail && ! empty( $detail['title'] ) ) : ?>
+				<p class="fab-page-copy"><?php echo esc_html( $detail['title'] ); ?></p>
+			<?php endif; ?>
 		</div>
 
 		<?php if ( 'saved' === $status ) : ?>
