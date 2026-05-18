@@ -860,6 +860,7 @@ function normalize_lookup_value($value)
 function normalize_text($value)
 {
     $value = str_replace(array("\r", "\n"), ' ', $value);
+    $value = preg_replace('/\+[A-Z]{1,3}\d+:[A-Z]{1,3}\d+/u', '', $value);
     $value = preg_replace('/\s+/u', ' ', $value);
     return trim((string) $value);
 }

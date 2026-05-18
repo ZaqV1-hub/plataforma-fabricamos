@@ -1163,7 +1163,7 @@
                            "Bromazepam",
                            "Carbonato de lÃ­tio",
                            "Cilostazol",
-                           "Cloridrat+B85:E153o de midazolam",
+                           "Cloridrato de midazolam",
                            "Dapaconazol",
                            "Flumazenil",
                            "Hemitartato de zolpidem",
@@ -1225,14 +1225,14 @@
                                   "display_name":  "Cilostazol"
                               },
                               {
-                                  "insumo":  "Cloridrat+B85:E153o de midazolam",
+                                 "insumo":  "Cloridrato de midazolam",
                                   "dcb":  "05938",
                                   "inn":  "Midazolam Hydrochloride",
                                   "cas":  "59467-96-8",
                                   "ncm":  "2933.91.53",
                                   "cbpf":  "1153453231",
                                   "validade":  "2026-04-29",
-                                  "display_name":  "Cloridrat+B85:E153o de midazolam"
+                                 "display_name":  "Cloridrato de midazolam"
                               },
                               {
                                   "insumo":  "Dapaconazol",

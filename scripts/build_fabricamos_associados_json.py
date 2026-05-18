@@ -35,6 +35,7 @@ PLACEHOLDER_VALUES = {
 COMPANY_REPLACEMENTS = {
     "cristalia produtos quimicos farmaceutico ltda.": "CRISTALIA PRODUTOS QUIMICOS FARMACEUTICOS Ltda.",
 }
+SPREADSHEET_RANGE_ARTIFACT_RE = re.compile(r"\+[A-Z]{1,3}\d+:[A-Z]{1,3}\d+")
 
 
 def parse_args() -> argparse.Namespace:
@@ -65,6 +66,7 @@ def clean_scalar(value: object) -> str:
 
     text = str(value)
     text = text.replace("\r", " ").replace("\n", " ")
+    text = SPREADSHEET_RANGE_ARTIFACT_RE.sub("", text)
     text = re.sub(r"\s+", " ", text).strip()
     if re.fullmatch(r"\d{4}-\d{2}-\d{2} 00:00:00", text):
         return text[:10]

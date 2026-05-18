@@ -11,13 +11,25 @@ $status       = isset( $_GET[ Fabricamos_Native::QUERY_SUCCESS ] ) ? sanitize_te
 $view         = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view'] ) ) : '';
 $edit_id      = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
 $page_title   = 'Painel';
-$show_user    = $is_panel;
+$show_user    = false;
 $panel_url    = home_url( '/painel/' );
+$session_name = 'Painel administrativo';
+$logout_url   = $fabricamos->logout_url( 'panel' );
 
 include __DIR__ . '/partials/page-start.php';
 ?>
 <section class="fab-page fab-page--panel<?php echo ! $is_panel ? ' fab-page--login' : ''; ?>">
 	<div class="fab-container-wide">
+		<?php if ( $is_panel ) : ?>
+			<div class="fab-session-chip" aria-label="Sessão do painel">
+				<div class="fab-session-chip__avatar" aria-hidden="true"></div>
+				<div class="fab-session-chip__meta">
+					<span>Olá, <strong><?php echo esc_html( $session_name ); ?></strong></span>
+					<a class="fab-session-chip__logout" href="<?php echo esc_url( $logout_url ); ?>">Sair</a>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<?php if ( ! $is_panel ) : ?>
 			<div class="fab-login-wrap">
 				<div class="fab-login-card">

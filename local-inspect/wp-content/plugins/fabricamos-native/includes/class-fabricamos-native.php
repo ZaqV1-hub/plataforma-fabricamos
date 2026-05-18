@@ -3556,6 +3556,8 @@ class Fabricamos_Native {
 
 	protected function clean_catalog_value( $value ) {
 		$text = trim( $this->repair_mojibake_text( (string) $value ) );
+		$text = preg_replace( '/\+[A-Z]{1,3}\d+:[A-Z]{1,3}\d+/u', '', $text );
+		$text = trim( preg_replace( '/\s+/u', ' ', $text ) );
 		return $this->is_placeholder_catalog_value( $text ) ? '' : $text;
 	}
 

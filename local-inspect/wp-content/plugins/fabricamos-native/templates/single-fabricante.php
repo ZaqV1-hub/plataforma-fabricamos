@@ -11,12 +11,30 @@ $view_context = $fabricamos->get_manufacturer_view_context();
 $back_url   = $fabricamos->get_manufacturer_back_url( $view_context );
 $edit_url   = $fabricamos->get_manufacturer_edit_url( $post instanceof WP_Post ? $post->ID : 0, $view_context );
 $page_title = $detail['title'];
-$show_user  = true;
+$show_user  = false;
+$session_name = '';
+$logout_url   = '';
+
+if ( 'fabricante' === $view_context ) {
+	$session_name = ! empty( $detail['editor_name'] ) ? $detail['editor_name'] : $detail['contact_name'];
+	$session_name = $session_name ? $session_name : $detail['title'];
+	$logout_url   = $fabricamos->logout_url( 'manufacturer' );
+}
 
 include __DIR__ . '/partials/page-start.php';
 ?>
 <section class="fab-page fab-page--narrow">
 	<div class="fab-container">
+		<?php if ( $session_name && $logout_url ) : ?>
+			<div class="fab-session-chip" aria-label="Sessão do fabricante">
+				<div class="fab-session-chip__avatar" aria-hidden="true"></div>
+				<div class="fab-session-chip__meta">
+					<span>Olá, <strong><?php echo esc_html( $session_name ); ?></strong></span>
+					<a class="fab-session-chip__logout" href="<?php echo esc_url( $logout_url ); ?>">Sair</a>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<div class="fab-head-row">
 			<a class="fab-back" href="<?php echo esc_url( $back_url ); ?>" aria-label="Voltar"><span aria-hidden="true">&larr;</span></a>
 			<div class="fab-title-line-wrap">

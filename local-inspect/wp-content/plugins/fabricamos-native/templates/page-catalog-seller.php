@@ -8,8 +8,16 @@ $fabricamos  = Fabricamos_Native::instance();
 $context     = $fabricamos->get_catalog_context( 'fabricante' );
 $catalog_url = home_url( '/fabricamos-fabricante/' );
 $page_title  = 'Fabricamos - Fabricante';
-$show_user   = true;
+$show_user   = false;
 $my_company  = $fabricamos->get_current_user_manufacturer();
+$detail      = $my_company ? $fabricamos->get_manufacturer_detail( $my_company ) : null;
+$session_name = '';
+$logout_url   = $fabricamos->logout_url( 'manufacturer' );
+
+if ( $detail ) {
+	$session_name = ! empty( $detail['editor_name'] ) ? $detail['editor_name'] : $detail['contact_name'];
+	$session_name = $session_name ? $session_name : $detail['title'];
+}
 $edit_url    = $my_company ? home_url( '/meu-fabricante/' ) : '';
 $detail_text = $my_company ? 'Edite o seu cadastro e mantenha as substâncias sempre atualizadas.' : 'Seu usuário ainda não está vinculado a um fabricante publicado.';
 
@@ -17,6 +25,16 @@ include __DIR__ . '/partials/page-start.php';
 ?>
 <section class="fab-page fab-page--catalog">
 	<div class="fab-container-wide">
+		<?php if ( $session_name ) : ?>
+			<div class="fab-session-chip" aria-label="Sessão do fabricante">
+				<div class="fab-session-chip__avatar" aria-hidden="true"></div>
+				<div class="fab-session-chip__meta">
+					<span>Olá, <strong><?php echo esc_html( $session_name ); ?></strong></span>
+					<a class="fab-session-chip__logout" href="<?php echo esc_url( $logout_url ); ?>">Sair</a>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<div class="fab-grid-layout">
 			<aside class="fab-sidebar">
 				<div class="fab-section-title">

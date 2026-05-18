@@ -9,12 +9,29 @@ $manufacturer = $fabricamos->get_current_user_manufacturer();
 $detail       = $manufacturer ? $fabricamos->get_manufacturer_detail( $manufacturer ) : null;
 $status       = isset( $_GET[ Fabricamos_Native::QUERY_SUCCESS ] ) ? sanitize_text_field( wp_unslash( $_GET[ Fabricamos_Native::QUERY_SUCCESS ] ) ) : '';
 $page_title   = 'Meu Fabricante';
-$show_user    = true;
+$show_user    = false;
+$session_name = '';
+$logout_url   = $fabricamos->logout_url( 'manufacturer' );
+
+if ( $detail ) {
+	$session_name = ! empty( $detail['editor_name'] ) ? $detail['editor_name'] : $detail['contact_name'];
+	$session_name = $session_name ? $session_name : $detail['title'];
+}
 
 include __DIR__ . '/partials/page-start.php';
 ?>
 <section class="fab-page fab-page--narrow fab-page--profile">
 	<div class="fab-container">
+		<?php if ( $session_name ) : ?>
+			<div class="fab-session-chip" aria-label="Sessão do fabricante">
+				<div class="fab-session-chip__avatar" aria-hidden="true"></div>
+				<div class="fab-session-chip__meta">
+					<span>Olá, <strong><?php echo esc_html( $session_name ); ?></strong></span>
+					<a class="fab-session-chip__logout" href="<?php echo esc_url( $logout_url ); ?>">Sair</a>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<div class="fab-page-intro">
 			<span class="fab-page-kicker">Área do fabricante</span>
 			<div class="fab-title-line-wrap">
