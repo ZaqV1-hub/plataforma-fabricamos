@@ -1560,6 +1560,7 @@ class Fabricamos_Native {
 				'nonce'            => wp_create_nonce( 'wp_rest' ),
 				'catalogUrl'       => $this->public_catalog_url(),
 				'currentUser'      => $this->get_public_site_user_name(),
+				'headerMenu'       => $this->get_header_user_menu_context(),
 				'announceState'    => isset( $_GET[ self::QUERY_SUCCESS ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::QUERY_SUCCESS ] ) ) : '',
 			)
 		);
@@ -3196,7 +3197,124 @@ class Fabricamos_Native {
 	}
 
 	public function render_dsf_user_menu_shortcode() {
-		return '';
+		$menu = $this->get_header_user_menu_context();
+		if ( empty( $menu['label'] ) ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<div class="dsf-user-menu">
+			<button class="dsf-user-menu__trigger" type="button" aria-haspopup="true" aria-expanded="false">
+				<span class="dsf-user-icon" aria-hidden="true">
+					<span class="dsf-user-icon__ring"></span>
+					<span class="dsf-user-icon__head"></span>
+				</span>
+				<span class="dsf-user-label">
+					<span><?php echo esc_html( $menu['label'] ); ?></span>
+				</span>
+			</button>
+			<?php if ( ! empty( $menu['items'] ) ) : ?>
+				<div class="dsf-user-dropdown">
+					<?php foreach ( $menu['items'] as $item ) : ?>
+						<a href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	protected function get_header_user_menu_context() {
+		if ( $this->is_panel_area_request() ) {
+			return array(
+				'label' => $this->is_panel_authenticated() ? 'Painel' : 'Acesso ao painel',
+				'items' => array(
+					array(
+						'title' => $this->is_panel_authenticated() ? 'Sair' : 'Entrar',
+						'url'   => $this->is_panel_authenticated() ? $this->logout_url( 'panel' ) : $this->panel_login_url(),
+					),
+				),
+			);
+		}
+
+		if ( $this->is_manufacturer_area_request() ) {
+			$label = 'Acesso do fabricante';
+			if ( $this->is_manufacturer_authenticated() ) {
+				$manufacturer = $this->get_current_user_manufacturer();
+				$detail       = $manufacturer ? $this->get_manufacturer_detail( $manufacturer ) : array();
+				$label        = ! empty( $detail['editor_name'] ) ? $detail['editor_name'] : $label;
+				if ( 'Acesso do fabricante' === $label && ! empty( $detail['contact_name'] ) ) {
+					$label = $detail['contact_name'];
+				}
+				if ( 'Acesso do fabricante' === $label && ! empty( $detail['title'] ) ) {
+					$label = $detail['title'];
+				}
+			}
+
+			return array(
+				'label' => $label,
+				'items' => array(
+					array(
+						'title' => $this->is_manufacturer_authenticated() ? 'Sair' : 'Entrar',
+						'url'   => $this->is_manufacturer_authenticated() ? $this->logout_url( 'manufacturer' ) : $this->login_url(),
+					),
+				),
+			);
+		}
+
+		$items = array();
+		if ( $this->is_public_site_authenticated() ) {
+			$sso = $this->public_sso();
+			if ( ! $sso ) {
+				return array(
+					'label' => 'Minha conta',
+					'items' => array(),
+				);
+			}
+
+			$items[] = array(
+				'title' => 'Minha conta',
+				'url'   => home_url( '/account/' ),
+			);
+			$items[] = array(
+				'title' => 'Sair',
+				'url'   => $sso->public_logout_url( $this->public_post_logout_redirect_url() ),
+			);
+
+			return array(
+				'label' => 'Minha conta',
+				'items' => $items,
+			);
+		}
+
+		return array(
+			'label' => 'Minha conta',
+			'items' => array(
+				array(
+					'title' => 'Criar conta',
+					'url'   => $this->site_register_url( $this->public_current_request_url() ),
+				),
+				array(
+					'title' => 'Entrar',
+					'url'   => $this->site_login_url( $this->public_current_request_url() ),
+				),
+			),
+		);
+	}
+
+	protected function is_manufacturer_area_request() {
+		if ( is_page( array( 'fabricante', 'fabricamos-fabricante', 'meu-fabricante' ) ) ) {
+			return true;
+		}
+
+		return is_singular( 'fabricante' ) && 'fabricante' === $this->get_manufacturer_view_context();
+	}
+
+	protected function is_panel_area_request() {
+		return is_page( 'painel' );
 	}
 
 	public function render_fabricamos_account_shortcode() {
